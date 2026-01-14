@@ -26,13 +26,14 @@ export default function Home() {
 
   const [result, setResult] = useState(null);
 
+  const API_BASE = "https://progresstruth-api.onrender.com";
+  // const API_BASE = "http://localhost:5000";
   // 🔄 FETCH HISTORY FUNCTION
   const fetchHistory = useCallback(async (id) => {
     if (!id) return;
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/checkin/history/${id}`
-      );
+      const res = await fetch(`${API_BASE}/api/checkin/history/${id}`);
+
       const data = await res.json();
       setHistory(data);
     } catch (err) {
@@ -54,7 +55,7 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/user/create", {
+      const res = await fetch(`${API_BASE}/api/user/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userForm),
@@ -80,7 +81,7 @@ export default function Home() {
     setTimeout(async () => {
       try {
         const payload = { ...checkInForm, userId: userId };
-        const res = await fetch("http://localhost:5000/api/checkin/analyze", {
+        const res = await fetch(`${API_BASE}/api/checkin/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -122,7 +123,6 @@ export default function Home() {
         PROGRESS TRUTH ENGINE
       </h1>
 
-      {/* 🛑 NO ID? SHOW ONBOARDING */}
       {!userId ? (
         <div
           style={{
@@ -180,7 +180,6 @@ export default function Home() {
           </form>
         </div>
       ) : (
-        /* 🟢 MAIN APP */
         <div style={{ width: "100%", maxWidth: "400px" }}>
           <div
             style={{
@@ -476,4 +475,3 @@ const btnStyle = {
   border: "none",
   cursor: "pointer",
 };
-  
