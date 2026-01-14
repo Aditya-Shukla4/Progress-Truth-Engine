@@ -1,19 +1,20 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react"; // 👈 useRef add kiya
+import { useState, useEffect, useCallback, useRef } from "react";
 import PersonalRecords from "./PersonalRecords";
 import RestTimer from "./RestTimer";
 import OneRepMax from "./OneRepMax";
 import MuscleSplitChart from "./MuscleSplitChart";
-import ShareableWorkoutCard from "./ShareableWorkoutCard"; // 👈 NEW IMPORT
+import ShareableWorkoutCard from "./ShareableWorkoutCard";
 import { motion, AnimatePresence } from "framer-motion";
-import html2canvas from "html2canvas"; // 👈 NEW IMPORT
+import html2canvas from "html2canvas";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const [templates, setTemplates] = useState([]); // 👈 Store Templates
   const [expandedId, setExpandedId] = useState(null);
 
-  // 📸 SHARE STATE
+  // Share State
   const shareCardRef = useRef(null);
   const [shareData, setShareData] = useState(null);
 
@@ -24,19 +25,26 @@ export default function WorkoutLog({ apiBase, userId }) {
     ],
   });
 
-  const fetchHistory = useCallback(async () => {
+  // 1. FETCH HISTORY & TEMPLATES
+  const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`${apiBase}/api/workout/history/${userId}`);
-      if (res.ok) setHistory(await res.json());
+      // Fetch History
+      const resHist = await fetch(`${apiBase}/api/workout/history/${userId}`);
+      if (resHist.ok) setHistory(await resHist.json());
+
+      // Fetch Templates 👈 NEW
+      const resTemp = await fetch(`${apiBase}/api/template/${userId}`);
+      if (resTemp.ok) setTemplates(await resTemp.json());
     } catch (err) {
-      console.error("History fail");
+      console.error("Data fetch fail");
     }
   }, [apiBase, userId]);
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    fetchData();
+  }, [fetchData]);
 
+  // 2. SAVE LOGIC (Workout)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -58,7 +66,7 @@ export default function WorkoutLog({ apiBase, userId }) {
             },
           ],
         });
-        fetchHistory();
+        fetchData();
       }
     } catch (err) {
       alert("Error");
@@ -66,35 +74,76 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 🗑️ DELETE FUNCTIONS
+  // 3. SAVE AS TEMPLATE (Routine) 👈 NEW
+  const handleSaveTemplate = async () => {
+    if (!log.workoutName)
+      return alert("Pehle Routine ka naam toh likh! (Session Name)");
+
+    const confirmSave = confirm(
+      `Save "${log.workoutName}" as a permanent routine?`
+    );
+    if (!confirmSave) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/template/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          name: log.workoutName,
+          exercises: log.exercises,
+        }),
+      });
+      if (res.ok) {
+        alert("Routine Saved! 💾");
+        fetchData(); // Refresh dropdown
+      }
+    } catch (err) {
+      alert("Save failed");
+    }
+  };
+
+  // 4. LOAD TEMPLATE 👈 NEW
+  const handleLoadTemplate = (templateId) => {
+    if (!templateId) return;
+
+    const selected = templates.find((t) => t._id === templateId);
+    if (selected) {
+      // Template data load karo, lekin sets khali rakho taaki user aaj ka weight daale
+      setLog({
+        workoutName: selected.name,
+        exercises: selected.exercises.map((ex) => ({
+          name: ex.name,
+          targetMuscle: ex.targetMuscle,
+          sets: [{ reps: "", weight: "" }], // Clean slate for today
+        })),
+      });
+    }
+  };
+
+  // 5. DELETE TEMPLATE
+  const handleDeleteTemplate = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm("Ye Routine uda du?")) return;
+    await fetch(`${apiBase}/api/template/${id}`, { method: "DELETE" });
+    fetchData();
+  };
+
+  // ... (Standard Helpers: delete, addSet, share etc. - Same as before)
   const handleDeleteWorkout = async (e, workoutId) => {
     e.stopPropagation();
     if (!confirm("Pura Workout uda du?")) return;
-    try {
-      const res = await fetch(`${apiBase}/api/workout/${workoutId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) fetchHistory();
-    } catch (err) {
-      alert("Server Error");
-    }
+    await fetch(`${apiBase}/api/workout/${workoutId}`, { method: "DELETE" });
+    fetchData();
   };
-
   const handleDeleteExercise = async (e, workoutId, exerciseId) => {
     e.stopPropagation();
     if (!confirm("Sirf ye exercise hatani hai?")) return;
-    try {
-      const res = await fetch(
-        `${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`,
-        { method: "DELETE" }
-      );
-      if (res.ok) fetchHistory();
-    } catch (err) {
-      alert("Server Error");
-    }
+    await fetch(`${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`, {
+      method: "DELETE",
+    });
+    fetchData();
   };
-
-  // UI Helpers
   const addExercise = () =>
     setLog({
       ...log,
@@ -103,35 +152,28 @@ export default function WorkoutLog({ apiBase, userId }) {
         { name: "", targetMuscle: "Chest", sets: [{ reps: "", weight: "" }] },
       ],
     });
-
   const addSet = (exIdx) => {
     const newEx = [...log.exercises];
     newEx[exIdx].sets.push({ reps: "", weight: "" });
     setLog({ ...log, exercises: newEx });
   };
-
   const updateEx = (idx, field, val) => {
     const newEx = [...log.exercises];
     newEx[idx][field] = val;
     setLog({ ...log, exercises: newEx });
   };
-
   const updateSet = (exIdx, sIdx, field, val) => {
     const newEx = [...log.exercises];
     newEx[exIdx].sets[sIdx][field] = val;
     setLog({ ...log, exercises: newEx });
   };
-
   const toggleCard = (id) => {
     if (expandedId === id) setExpandedId(null);
     else setExpandedId(id);
   };
-
-  // 🧮 STATS CALCULATION FOR SHARE
   const getWorkoutStats = (workout) => {
     let totalVol = 0;
     let best = { weight: 0, reps: 0, name: "" };
-
     workout.exercises.forEach((ex) => {
       ex.sets.forEach((set) => {
         const w = parseFloat(set.weight) || 0;
@@ -144,35 +186,22 @@ export default function WorkoutLog({ apiBase, userId }) {
     });
     return { totalVolume: totalVol, bestLift: best.weight > 0 ? best : null };
   };
-
-  // 📸 SHARE HANDLER
   const handleShare = async (e, workout) => {
     e.stopPropagation();
-
-    // 1. Data Ready Karo
     const stats = getWorkoutStats(workout);
     setShareData({ workout, ...stats });
-
-    // 2. Wait for Render & Capture
     setTimeout(async () => {
       if (shareCardRef.current) {
-        try {
-          const canvas = await html2canvas(shareCardRef.current, {
-            backgroundColor: null,
-            scale: 2, // High Quality
-          });
-
-          const image = canvas.toDataURL("image/png");
-          const link = document.createElement("a");
-          link.href = image;
-          link.download = `PTE_${workout.workoutName}.png`;
-          link.click();
-
-          setShareData(null); // Cleanup
-        } catch (err) {
-          console.error("Share failed:", err);
-          alert("Image generation failed.");
-        }
+        const canvas = await html2canvas(shareCardRef.current, {
+          backgroundColor: null,
+          scale: 2,
+        });
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = `PTE_${workout.workoutName}.png`;
+        link.click();
+        setShareData(null);
       }
     }, 200);
   };
@@ -183,8 +212,6 @@ export default function WorkoutLog({ apiBase, userId }) {
       <RestTimer />
       <MuscleSplitChart history={history} />
       <OneRepMax />
-
-      {/* 🤫 HIDDEN CARD FOR SHARING */}
       <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
 
       {/* LOG FORM */}
@@ -198,7 +225,45 @@ export default function WorkoutLog({ apiBase, userId }) {
           marginTop: "20px",
         }}
       >
-        <h3 style={{ color: "#888", fontSize: "0.9rem" }}>LOG SESSION</h3>
+        {/* 🆕 TEMPLATE LOADER HEADER */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid #333",
+            paddingBottom: "15px",
+            marginBottom: "5px",
+          }}
+        >
+          <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
+            LOG SESSION
+          </h3>
+
+          {/* LOAD DROPDOWN */}
+          <select
+            onChange={(e) => handleLoadTemplate(e.target.value)}
+            style={{
+              padding: "5px",
+              background: "#222",
+              color: "#fff",
+              border: "1px solid #444",
+              fontSize: "0.8rem",
+              width: "150px",
+            }}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              📂 Load Routine...
+            </option>
+            {templates.map((t) => (
+              <option key={t._id} value={t._id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <input
           placeholder="Session Name (e.g. Push Day)"
           required
@@ -225,7 +290,6 @@ export default function WorkoutLog({ apiBase, userId }) {
             >
               EXERCISE {i + 1}
             </div>
-
             <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
               <input
                 placeholder="Exercise Name"
@@ -234,7 +298,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                 onChange={(e) => updateEx(i, "name", e.target.value)}
                 style={{ ...inputStyle, flex: 2 }}
               />
-
               <select
                 value={ex.targetMuscle}
                 onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
@@ -250,7 +313,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                 <option value="Other">Other</option>
               </select>
             </div>
-
             {ex.sets.map((s, j) => (
               <div
                 key={j}
@@ -290,31 +352,98 @@ export default function WorkoutLog({ apiBase, userId }) {
             </button>
           </div>
         ))}
-        <button
-          type="button"
-          onClick={addExercise}
-          style={{
-            padding: "10px",
-            background: "none",
-            border: "1px dashed #444",
-            color: "#ccc",
-            cursor: "pointer",
-          }}
-        >
-          + ADD EXERCISE
-        </button>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            type="button"
+            onClick={addExercise}
+            style={{
+              flex: 1,
+              padding: "10px",
+              background: "none",
+              border: "1px dashed #444",
+              color: "#ccc",
+              cursor: "pointer",
+            }}
+          >
+            + ADD EXERCISE
+          </button>
+          {/* 🆕 SAVE TEMPLATE BUTTON */}
+          <button
+            type="button"
+            onClick={handleSaveTemplate}
+            style={{
+              flex: 1,
+              padding: "10px",
+              background: "#222",
+              border: "1px solid #444",
+              color: "#ef4444",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            💾 SAVE ROUTINE
+          </button>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
           style={{ ...btnStyle, background: "white", color: "black" }}
         >
-          SAVE LOG
+          FINISH & LOG
         </button>
       </form>
 
-      {/* HISTORY WITH SHARE BUTTON */}
+      {/* HISTORY (With Manage Templates Section? Optional but let's keep it simple for now) */}
       <div style={{ marginTop: "20px" }}>
-        <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
+        {/* Simple Template List to Delete */}
+        {templates.length > 0 && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "10px",
+              border: "1px dashed #333",
+            }}
+          >
+            <h4
+              style={{
+                margin: 0,
+                marginBottom: "10px",
+                color: "#666",
+                fontSize: "0.8rem",
+              }}
+            >
+              SAVED ROUTINES
+            </h4>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              {templates.map((t) => (
+                <div
+                  key={t._id}
+                  style={{
+                    background: "#111",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                    fontSize: "0.8rem",
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>{t.name}</span>
+                  <span
+                    onClick={(e) => handleDeleteTemplate(e, t._id)}
+                    style={{ cursor: "pointer", color: "#ef4444" }}
+                  >
+                    ✕
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <h3 style={{ color: "#666", fontSize: "0.9rem", marginBottom: "10px" }}>
           RECENT GRIND
         </h3>
         <AnimatePresence mode="popLayout">
@@ -356,7 +485,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                       {new Date(w.date).toLocaleDateString()}
                     </div>
                   </div>
-
                   <div
                     style={{
                       display: "flex",
@@ -364,7 +492,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                       gap: "10px",
                     }}
                   >
-                    {/* 📸 SHARE BUTTON */}
                     <button
                       onClick={(e) => handleShare(e, w)}
                       style={{
@@ -373,11 +500,9 @@ export default function WorkoutLog({ apiBase, userId }) {
                         cursor: "pointer",
                         fontSize: "1.2rem",
                       }}
-                      title="Share Workout"
                     >
                       📸
                     </button>
-
                     <button
                       onClick={(e) => handleDeleteWorkout(e, w._id)}
                       style={{
@@ -386,7 +511,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                         cursor: "pointer",
                         fontSize: "1.2rem",
                       }}
-                      title="Delete Workout"
                     >
                       🗑️
                     </button>
@@ -395,7 +519,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                     </div>
                   </div>
                 </div>
-
                 <AnimatePresence>
                   {expandedId === w._id && (
                     <motion.div
@@ -492,7 +615,6 @@ export default function WorkoutLog({ apiBase, userId }) {
   );
 }
 
-// Styles
 const cardStyle = {
   width: "100%",
   padding: "20px",

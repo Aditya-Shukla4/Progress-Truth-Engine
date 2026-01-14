@@ -1,31 +1,25 @@
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const checkInRoutes = require("./routes/checkInRoutes");
-const app = express();
-const port = process.env.PORT || 5000;
+require("dotenv").config();
+
+// 👇 1. IMPORT (Ye line check kar, upar honi chahiye)
 const userRoutes = require("./routes/userRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
+const templateRoutes = require("./routes/templateRoutes"); // 👈 YE ADD KAR
 
-// Middleware
-app.use(express.json());
+const app = express();
 app.use(cors());
-app.use("/api/checkin", checkInRoutes);
+app.use(express.json());
+
+// 👇 2. ENABLE ROUTE (Ye line check kar, neeche honi chahiye)
 app.use("/api/user", userRoutes);
 app.use("/api/workout", workoutRoutes);
+app.use("/api/template", templateRoutes); // 👈 YE BHI ADD KAR (Iske bina 404 aayega)
 
-// Database Connection
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("🔥 MongoDB Connected Successfully!"))
-  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.log(err));
 
-// Routes
-app.get("/", (req, res) => {
-  res.send("🔥 Progress Truth Engine Backend is ALIVE & CONNECTED!");
-});
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+app.listen(5000, () => console.log("Server running on port 5000"));
