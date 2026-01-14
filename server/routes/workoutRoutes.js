@@ -66,4 +66,24 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.delete("/:workoutId/exercise/:exerciseId", async (req, res) => {
+  try {
+    const { workoutId, exerciseId } = req.params;
+
+    const updatedWorkout = await Workout.findByIdAndUpdate(
+      workoutId,
+      { $pull: { exercises: { _id: exerciseId } } }, // 👈 $pull ka matlab "kheench ke nikal do"
+      { new: true } // Return updated document
+    );
+
+    if (!updatedWorkout)
+      return res.status(404).json({ error: "Workout nahi mila" });
+
+    res.json(updatedWorkout);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Exercise delete nahi hui" });
+  }
+});
+
 module.exports = router;

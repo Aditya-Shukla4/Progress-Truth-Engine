@@ -48,15 +48,32 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 🗑️ DELETE FUNCTION (NEW)
-  const handleDelete = async (e, workoutId) => {
-    e.stopPropagation(); // Card khulne se roko (sirf delete karo)
-    if (!confirm("Pakka delete karna hai?")) return; // Galti se click na ho jaye
-
+  // 🗑️ DELETE FULL WORKOUT
+  const handleDeleteWorkout = async (e, workoutId) => {
+    e.stopPropagation();
+    if (!confirm("Pura Workout uda du?")) return;
     try {
       const res = await fetch(`${apiBase}/api/workout/${workoutId}`, {
         method: "DELETE",
       });
+      if (res.ok) fetchHistory();
+    } catch (err) {
+      alert("Server Error");
+    }
+  };
+
+  // 🔪 DELETE SINGLE EXERCISE (NEW FEATURE)
+  const handleDeleteExercise = async (e, workoutId, exerciseId) => {
+    e.stopPropagation(); // Parent click mat hone do
+    if (!confirm("Sirf ye exercise hatani hai?")) return;
+
+    try {
+      const res = await fetch(
+        `${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`,
+        {
+          method: "DELETE",
+        }
+      );
       if (res.ok) {
         fetchHistory(); // List refresh karo
       } else {
@@ -67,7 +84,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     }
   };
 
-  // UI Helpers... (Same as before)
+  // UI Helpers (Same as before)
   const addExercise = () =>
     setLog({
       ...log,
@@ -205,7 +222,7 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* HISTORY WITH DELETE */}
+      {/* HISTORY WITH MICRO-DELETE */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
           RECENT GRIND
@@ -248,16 +265,16 @@ export default function WorkoutLog({ apiBase, userId }) {
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "15px" }}
                 >
-                  {/* 🗑️ DELETE BUTTON */}
+                  {/* 🗑️ BIG DELETE (Pura Workout) */}
                   <button
-                    onClick={(e) => handleDelete(e, w._id)}
+                    onClick={(e) => handleDeleteWorkout(e, w._id)}
                     style={{
                       background: "none",
                       border: "none",
                       cursor: "pointer",
                       fontSize: "1.2rem",
                     }}
-                    title="Delete Log"
+                    title="Delete Whole Workout"
                   >
                     🗑️
                   </button>
@@ -267,6 +284,7 @@ export default function WorkoutLog({ apiBase, userId }) {
                 </div>
               </div>
 
+              {/* EXERCISE LIST */}
               {expandedId === w._id && (
                 <div
                   style={{
@@ -276,17 +294,62 @@ export default function WorkoutLog({ apiBase, userId }) {
                   }}
                 >
                   {w.exercises.map((ex, k) => (
-                    <div key={k} style={{ marginBottom: "10px" }}>
+                    <div
+                      key={k}
+                      style={{
+                        marginBottom: "10px",
+                        paddingBottom: "10px",
+                        borderBottom:
+                          k === w.exercises.length - 1
+                            ? "none"
+                            : "1px dashed #222",
+                      }}
+                    >
+                      {/* Exercise Header with Small Delete */}
                       <div
                         style={{
-                          color: "#ef4444",
-                          fontSize: "0.9rem",
-                          marginBottom: "2px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                         }}
                       >
-                        {ex.name}
+                        <div
+                          style={{
+                            color: "#ef4444",
+                            fontSize: "0.9rem",
+                            marginBottom: "2px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {ex.name}
+                        </div>
+
+                        {/* 🔪 SMALL DELETE (Sirf Exercise) */}
+                        <button
+                          onClick={(e) =>
+                            handleDeleteExercise(e, w._id, ex._id)
+                          }
+                          style={{
+                            background: "#222",
+                            border: "1px solid #333",
+                            color: "#888",
+                            cursor: "pointer",
+                            fontSize: "0.7rem",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          ✕ Remove
+                        </button>
                       </div>
-                      <div style={{ color: "#ccc", fontSize: "0.8rem" }}>
+
+                      <div
+                        style={{
+                          color: "#ccc",
+                          fontSize: "0.8rem",
+                          marginTop: "5px",
+                        }}
+                      >
                         {ex.sets
                           .map((s) => `${s.weight}kg x ${s.reps}`)
                           .join(" | ")}
@@ -303,7 +366,7 @@ export default function WorkoutLog({ apiBase, userId }) {
   );
 }
 
-// Styles (Same as before)
+// Styles
 const cardStyle = {
   width: "100%",
   padding: "20px",
