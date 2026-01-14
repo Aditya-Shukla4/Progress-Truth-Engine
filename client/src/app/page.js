@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export default function Home() {
-  // STATE: USER ID (Pehchan)
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]); // 📜 State for Past Records
 
-  // STATE: ONBOARDING FORM
+  // FORMS
   const [userForm, setUserForm] = useState({
     username: "",
     height: "",
@@ -15,7 +15,6 @@ export default function Home() {
     hostelOrHome: "home",
   });
 
-  // STATE: CHECK-IN FORM (Truth Engine)
   const [checkInForm, setCheckInForm] = useState({
     currentWeight: "",
     avgSleep: "",
@@ -27,15 +26,30 @@ export default function Home() {
 
   const [result, setResult] = useState(null);
 
-  // 🕵️‍♂️ COMPONENT LOAD HOTE HI ID DHUNDO
+  // 🔄 FETCH HISTORY FUNCTION
+  const fetchHistory = useCallback(async (id) => {
+    if (!id) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/checkin/history/${id}`
+      );
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error("History fetch failed");
+    }
+  }, []);
+
+  // 🕵️‍♂️ LOAD USER & HISTORY ON START
   useEffect(() => {
     const savedId = localStorage.getItem("pte_userId");
     if (savedId) {
       setUserId(savedId);
+      fetchHistory(savedId); // Load history immediately
     }
-  }, []);
+  }, [fetchHistory]);
 
-  // 1️⃣ HANDLE ONBOARDING SUBMIT
+  // HANDLE USER SUBMIT
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -47,8 +61,9 @@ export default function Home() {
       });
       const data = await res.json();
       if (data._id) {
-        localStorage.setItem("pte_userId", data._id); // SAVE TO MEMORY
-        setUserId(data._id); // SWITCH TO MAIN APP
+        localStorage.setItem("pte_userId", data._id);
+        setUserId(data._id);
+        fetchHistory(data._id);
       }
     } catch (err) {
       alert("Server Error!");
@@ -56,18 +71,15 @@ export default function Home() {
     setLoading(false);
   };
 
-  // 2️⃣ HANDLE TRUTH CHECK SUBMIT
+  // HANDLE TRUTH CHECK SUBMIT
   const handleCheckInSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResult(null);
 
-    // Fake Matrix Effect Delay
     setTimeout(async () => {
       try {
-        // Asli ID bhejo ab!
         const payload = { ...checkInForm, userId: userId };
-
         const res = await fetch("http://localhost:5000/api/checkin/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -75,6 +87,7 @@ export default function Home() {
         });
         const data = await res.json();
         setResult(data);
+        fetchHistory(userId); // 🔄 Refresh list after checkin
       } catch (err) {
         alert("Engine Failed!");
       }
@@ -82,7 +95,6 @@ export default function Home() {
     }, 1500);
   };
 
-  // --- UI RENDER START ---
   return (
     <div
       style={{
@@ -110,7 +122,7 @@ export default function Home() {
         PROGRESS TRUTH ENGINE
       </h1>
 
-      {/* 🛑 SCENE 1: NO ID? SHOW ONBOARDING */}
+      {/* 🛑 NO ID? SHOW ONBOARDING */}
       {!userId ? (
         <div
           style={{
@@ -136,7 +148,7 @@ export default function Home() {
             style={{ display: "flex", flexDirection: "column", gap: "15px" }}
           >
             <input
-              placeholder="Name (e.g. Rahul)"
+              placeholder="Name"
               required
               onChange={(e) =>
                 setUserForm({ ...userForm, username: e.target.value })
@@ -152,10 +164,6 @@ export default function Home() {
               }
               style={inputStyle}
             />
-
-            <label style={{ color: "#888", fontSize: "0.8rem" }}>
-              DIET TYPE
-            </label>
             <select
               onChange={(e) =>
                 setUserForm({ ...userForm, dietType: e.target.value })
@@ -166,36 +174,42 @@ export default function Home() {
               <option value="eggs">Veg + Eggs</option>
               <option value="whey">Veg + Whey</option>
             </select>
-
             <button type="submit" disabled={loading} style={btnStyle}>
               {loading ? "SAVING..." : "START PROTOCOL"}
             </button>
           </form>
         </div>
       ) : (
-        /* 🟢 SCENE 2: ID FOUND? SHOW TRUTH ENGINE */
+        /* 🟢 MAIN APP */
         <div style={{ width: "100%", maxWidth: "400px" }}>
-          {/* LOGOUT BUTTON (Small) */}
-          <button
-            onClick={() => {
-              localStorage.removeItem("pte_userId");
-              setUserId(null);
-            }}
+          <div
             style={{
-              float: "right",
-              fontSize: "0.7rem",
-              color: "#666",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
               marginBottom: "10px",
             }}
           >
-            [ RESET IDENTITY ]
-          </button>
+            <span style={{ color: "#444", fontSize: "0.8rem" }}>
+              ID: {userId.slice(-4)}
+            </span>
+            <button
+              onClick={() => {
+                localStorage.removeItem("pte_userId");
+                setUserId(null);
+              }}
+              style={{
+                fontSize: "0.7rem",
+                color: "#666",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              [ RESET ]
+            </button>
+          </div>
 
           {result ? (
-            // RESULT CARD (Same as before)
             <div
               style={{
                 padding: "20px",
@@ -207,6 +221,7 @@ export default function Home() {
                     ? "yellow"
                     : "green",
                 backgroundColor: "#111",
+                marginBottom: "30px",
               }}
             >
               <h2
@@ -265,10 +280,14 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            // CHECK-IN FORM
             <form
               onSubmit={handleCheckInSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "15px",
+                marginBottom: "30px",
+              }}
             >
               <input
                 name="currentWeight"
@@ -283,7 +302,6 @@ export default function Home() {
                 }
                 style={inputStyle}
               />
-
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
                   name="avgSleep"
@@ -309,7 +327,6 @@ export default function Home() {
                   style={{ ...inputStyle, flex: 1 }}
                 />
               </div>
-
               <select
                 name="caloriesLevel"
                 onChange={(e) =>
@@ -324,7 +341,6 @@ export default function Home() {
                 <option value="deficit">Deficit (Cutting)</option>
                 <option value="surplus">Surplus (Bulking)</option>
               </select>
-
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
                   name="workoutDays"
@@ -354,7 +370,6 @@ export default function Home() {
                   <option value="decreasing">Strength: Down ⬇️</option>
                 </select>
               </div>
-
               <button
                 type="submit"
                 disabled={loading}
@@ -364,13 +379,86 @@ export default function Home() {
               </button>
             </form>
           )}
+
+          {/* 📜 HISTORY SECTION (NEW) */}
+          <div style={{ borderTop: "1px solid #333", paddingTop: "20px" }}>
+            <h3
+              style={{
+                color: "#666",
+                fontSize: "0.9rem",
+                marginBottom: "10px",
+                textTransform: "uppercase",
+              }}
+            >
+              Recent Evidence
+            </h3>
+            {history.length === 0 ? (
+              <p style={{ color: "#444", fontSize: "0.8rem" }}>
+                No records found.
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                {history.map((record) => (
+                  <div
+                    key={record._id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "10px",
+                      backgroundColor: "#111",
+                      borderLeft: `4px solid ${
+                        record.status === "RED"
+                          ? "#ef4444"
+                          : record.status === "YELLOW"
+                          ? "#facc15"
+                          : "#22c55e"
+                      }`,
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: "0.9rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {new Date(record.weekStartDate).toLocaleDateString()}
+                      </span>
+                      <span style={{ fontSize: "0.8rem", color: "#888" }}>
+                        {record.currentWeight}kg • {record.workoutDays} workouts
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: "bold",
+                        color:
+                          record.status === "RED"
+                            ? "#ef4444"
+                            : record.status === "YELLOW"
+                            ? "#facc15"
+                            : "#22c55e",
+                      }}
+                    >
+                      {record.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// Styling Variables (Cleaner Code)
 const inputStyle = {
   width: "100%",
   padding: "12px",
@@ -388,3 +476,4 @@ const btnStyle = {
   border: "none",
   cursor: "pointer",
 };
+  

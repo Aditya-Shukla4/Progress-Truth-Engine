@@ -93,4 +93,15 @@ router.post("/analyze", async (req, res) => {
   }
 });
 
+router.get("/history/:userId", async (req, res) => {
+  try {
+    const history = await CheckIn.find({ userId: req.params.userId })
+      .sort({ weekStartDate: -1 }) // Latest pehle
+      .limit(5); // Sirf last 5
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ error: "Could not fetch history" });
+  }
+});
+
 module.exports = router;
