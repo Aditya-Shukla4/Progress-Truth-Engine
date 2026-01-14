@@ -1,18 +1,22 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import PersonalRecords from "./PersonalRecords";
+import RestTimer from "./RestTimer"; // Timer jo lagaya tha
+import OneRepMax from "./OneRepMax"; // 1RM Calc
+import MuscleSplitChart from "./MuscleSplitChart"; // 👈 NEW CHART
 import { motion, AnimatePresence } from "framer-motion";
-import OneRepMax from "./OneRepMax";
-import RestTimer from "./RestTimer";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
 
+  // 🟢 LOG STATE UPDATED (Added targetMuscle)
   const [log, setLog] = useState({
     workoutName: "",
-    exercises: [{ name: "", sets: [{ reps: "", weight: "" }] }],
+    exercises: [
+      { name: "", targetMuscle: "Chest", sets: [{ reps: "", weight: "" }] },
+    ],
   });
 
   const fetchHistory = useCallback(async () => {
@@ -39,9 +43,16 @@ export default function WorkoutLog({ apiBase, userId }) {
       });
       if (res.ok) {
         alert("Logged! 💪");
+        // Reset Form
         setLog({
           workoutName: "",
-          exercises: [{ name: "", sets: [{ reps: "", weight: "" }] }],
+          exercises: [
+            {
+              name: "",
+              targetMuscle: "Chest",
+              sets: [{ reps: "", weight: "" }],
+            },
+          ],
         });
         fetchHistory();
       }
@@ -51,7 +62,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 🗑️ DELETE FULL WORKOUT
+  // 🗑️ DELETE FUNCTIONS (Same as before)
   const handleDeleteWorkout = async (e, workoutId) => {
     e.stopPropagation();
     if (!confirm("Pura Workout uda du?")) return;
@@ -65,21 +76,15 @@ export default function WorkoutLog({ apiBase, userId }) {
     }
   };
 
-  // 🔪 DELETE SINGLE EXERCISE
   const handleDeleteExercise = async (e, workoutId, exerciseId) => {
     e.stopPropagation();
     if (!confirm("Sirf ye exercise hatani hai?")) return;
-
     try {
       const res = await fetch(
         `${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`,
         { method: "DELETE" }
       );
-      if (res.ok) {
-        fetchHistory();
-      } else {
-        alert("Delete failed!");
-      }
+      if (res.ok) fetchHistory();
     } catch (err) {
       alert("Server Error");
     }
@@ -91,24 +96,29 @@ export default function WorkoutLog({ apiBase, userId }) {
       ...log,
       exercises: [
         ...log.exercises,
-        { name: "", sets: [{ reps: "", weight: "" }] },
+        { name: "", targetMuscle: "Chest", sets: [{ reps: "", weight: "" }] },
       ],
     });
+
   const addSet = (exIdx) => {
     const newEx = [...log.exercises];
     newEx[exIdx].sets.push({ reps: "", weight: "" });
     setLog({ ...log, exercises: newEx });
   };
-  const updateEx = (idx, val) => {
+
+  const updateEx = (idx, field, val) => {
+    // 👈 UPDATED HELPER
     const newEx = [...log.exercises];
-    newEx[idx].name = val;
+    newEx[idx][field] = val;
     setLog({ ...log, exercises: newEx });
   };
+
   const updateSet = (exIdx, sIdx, field, val) => {
     const newEx = [...log.exercises];
     newEx[exIdx].sets[sIdx][field] = val;
     setLog({ ...log, exercises: newEx });
   };
+
   const toggleCard = (id) => {
     if (expandedId === id) setExpandedId(null);
     else setExpandedId(id);
@@ -117,8 +127,13 @@ export default function WorkoutLog({ apiBase, userId }) {
   return (
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
-
       <RestTimer />
+
+      {/* 🥧 NEW CHART SECTION */}
+      <MuscleSplitChart history={history} />
+
+      {/* 🧪 1RM CALCULATOR */}
+      <OneRepMax />
 
       {/* LOG FORM */}
       <form
@@ -128,11 +143,12 @@ export default function WorkoutLog({ apiBase, userId }) {
           display: "flex",
           flexDirection: "column",
           gap: "15px",
+          marginTop: "20px",
         }}
       >
         <h3 style={{ color: "#888", fontSize: "0.9rem" }}>LOG SESSION</h3>
         <input
-          placeholder="Session Name (e.g. Chest)"
+          placeholder="Session Name (e.g. Push Day)"
           required
           value={log.workoutName}
           onChange={(e) => setLog({ ...log, workoutName: e.target.value })}
@@ -157,13 +173,33 @@ export default function WorkoutLog({ apiBase, userId }) {
             >
               EXERCISE {i + 1}
             </div>
-            <input
-              placeholder="Exercise Name"
-              required
-              value={ex.name}
-              onChange={(e) => updateEx(i, e.target.value)}
-              style={{ ...inputStyle, marginBottom: "10px" }}
-            />
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+              <input
+                placeholder="Exercise Name"
+                required
+                value={ex.name}
+                onChange={(e) => updateEx(i, "name", e.target.value)}
+                style={{ ...inputStyle, flex: 2 }}
+              />
+
+              {/* 🔽 MUSCLE SELECTOR */}
+              <select
+                value={ex.targetMuscle}
+                onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
+                style={{ ...inputStyle, flex: 1, cursor: "pointer" }}
+              >
+                <option value="Chest">Chest</option>
+                <option value="Back">Back</option>
+                <option value="Legs">Legs</option>
+                <option value="Shoulders">Shoulders</option>
+                <option value="Arms">Arms</option>
+                <option value="Core">Abs/Core</option>
+                <option value="Cardio">Cardio</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
             {ex.sets.map((s, j) => (
               <div
                 key={j}
@@ -224,31 +260,23 @@ export default function WorkoutLog({ apiBase, userId }) {
           SAVE LOG
         </button>
       </form>
-      <OneRepMax />
-      <div style={{ marginTop: "20px" }}></div>
-      {/* 🎬 HISTORY WITH ANIMATIONS */}
+
+      {/* HISTORY LIST (Same animated one) */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
           RECENT GRIND
         </h3>
-
         <AnimatePresence mode="popLayout">
           {history.length === 0 ? (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{ color: "#444" }}
-            >
-              No logs yet.
-            </motion.p>
+            <p style={{ color: "#444" }}>No logs yet.</p>
           ) : (
             history.map((w) => (
               <motion.div
                 layout
                 key={w._id}
-                initial={{ opacity: 0, y: 20 }} // Enter animation
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }} // Exit animation (Shrink)
+                exit={{ opacity: 0, scale: 0.9 }}
                 onClick={() => toggleCard(w._id)}
                 style={{
                   padding: "15px",
@@ -259,10 +287,9 @@ export default function WorkoutLog({ apiBase, userId }) {
                       ? "3px solid #ef4444"
                       : "3px solid white",
                   cursor: "pointer",
-                  overflow: "hidden", // Important for height animation
+                  overflow: "hidden",
                 }}
               >
-                {/* Header */}
                 <div
                   style={{
                     display: "flex",
@@ -278,7 +305,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                       {new Date(w.date).toLocaleDateString()}
                     </div>
                   </div>
-
                   <div
                     style={{
                       display: "flex",
@@ -294,7 +320,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                         cursor: "pointer",
                         fontSize: "1.2rem",
                       }}
-                      title="Delete Whole Workout"
                     >
                       🗑️
                     </button>
@@ -304,7 +329,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                   </div>
                 </div>
 
-                {/* 🎬 Expanded Details Animation */}
                 <AnimatePresence>
                   {expandedId === w._id && (
                     <motion.div
@@ -336,15 +360,28 @@ export default function WorkoutLog({ apiBase, userId }) {
                               alignItems: "center",
                             }}
                           >
-                            <div
-                              style={{
-                                color: "#ef4444",
-                                fontSize: "0.9rem",
-                                marginBottom: "2px",
-                                fontWeight: "bold",
-                              }}
-                            >
-                              {ex.name}
+                            <div>
+                              <span
+                                style={{
+                                  color: "#ef4444",
+                                  fontSize: "0.9rem",
+                                  fontWeight: "bold",
+                                  marginRight: "10px",
+                                }}
+                              >
+                                {ex.name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.7rem",
+                                  backgroundColor: "#222",
+                                  padding: "2px 5px",
+                                  borderRadius: "3px",
+                                  color: "#888",
+                                }}
+                              >
+                                {ex.targetMuscle || "Other"}
+                              </span>
                             </div>
                             <button
                               onClick={(e) =>

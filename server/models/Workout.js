@@ -1,25 +1,17 @@
 const mongoose = require("mongoose");
 
 const WorkoutSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true, // Kiska workout hai?
-  },
-  date: {
-    type: Date,
-    default: Date.now, // Kab kiya?
-  },
-  workoutName: {
-    type: String, // e.g., "Push Day" or "Leg Day"
-    required: true,
-  },
+  userId: { type: String, required: true },
+  date: { type: Date, default: Date.now },
+  workoutName: { type: String, required: true },
   exercises: [
     {
-      name: { type: String, required: true }, // e.g., "Bench Press"
+      name: { type: String, required: true },
+      targetMuscle: { type: String, default: "Other" }, // 👈 YE WALI LINE ADD KAR
       sets: [
         {
           reps: { type: Number, required: true },
-          weight: { type: Number, required: true }, // kg mein
+          weight: { type: Number, required: true },
         },
       ],
     },
