@@ -71,17 +71,25 @@ export default function OneRepMax() {
             borderTop: "1px dashed #333",
           }}
         >
-          <div style={{ fontSize: "0.8rem", color: "#666" }}>
-            ESTIMATED 1 REP MAX
-          </div>
           <div
             style={{ fontSize: "2.5rem", fontWeight: "900", color: "#ef4444" }}
           >
             {result}
             <span style={{ fontSize: "1rem" }}>kg</span>
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "5px" }}>
-            (If you push till death 💀)
+
+          {/* 👇 YE LINE UPDATE KAR */}
+          <div
+            style={{
+              fontSize: "0.7rem",
+              color: "#888",
+              marginTop: "5px",
+              fontStyle: "italic",
+            }}
+          >
+            ⚠️ Only accurate for Compound Lifts (Squat/Bench/DL).
+            <br />
+            Don't ego-lift on accessories!
           </div>
         </motion.div>
       )}

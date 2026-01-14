@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import PersonalRecords from "./PersonalRecords";
 import { motion, AnimatePresence } from "framer-motion";
 import OneRepMax from "./OneRepMax";
+import RestTimer from "./RestTimer";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -116,6 +117,8 @@ export default function WorkoutLog({ apiBase, userId }) {
   return (
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
+
+      <RestTimer />
 
       {/* LOG FORM */}
       <form
