@@ -33,4 +33,26 @@ router.get("/history/:userId", async (req, res) => {
   }
 });
 
+router.get("/prs/:userId", async (req, res) => {
+  try {
+    // MongoDB Magic Pipeline 🪄
+    const prs = await Workout.aggregate([
+      { $match: { userId: req.params.userId } }, // 1. Sirf is user ka data lo
+      { $unwind: "$exercises" }, // 2. Saari exercises ko khol do
+      { $unwind: "$exercises.sets" }, // 3. Saare sets ko khol do
+      {
+        $group: {
+          _id: "$exercises.name", // 4. Exercise naam se group karo
+          maxLift: { $max: "$exercises.sets.weight" }, // 5. Max weight dhundo
+        },
+      },
+      { $sort: { maxLift: -1 } }, // 6. Bhaari wala upar
+    ]);
+
+    res.json(prs);
+  } catch (err) {
+    res.status(500).json({ error: "Records nahi mile" });
+  }
+});
+
 module.exports = router;

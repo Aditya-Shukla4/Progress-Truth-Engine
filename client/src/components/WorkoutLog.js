@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import PersonalRecords from "./PersonalRecords";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const [expandedId, setExpandedId] = useState(null); // 🟢 State to track open card
+
   const [log, setLog] = useState({
     workoutName: "",
     exercises: [{ name: "", sets: [{ reps: "", weight: "" }] }],
@@ -70,8 +73,18 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLog({ ...log, exercises: newEx });
   };
 
+  // 🟢 Toggle Card Function
+  const toggleCard = (id) => {
+    if (expandedId === id) setExpandedId(null); // Close if already open
+    else setExpandedId(id); // Open this one
+  };
+
   return (
     <div>
+      {/* 🏆 PR SECTION */}
+      <PersonalRecords apiBase={apiBase} userId={userId} />
+
+      {/* 📝 LOG FORM */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -176,38 +189,108 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
+      {/* 📜 UPDATED HISTORY SECTION (Expandable) */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
           RECENT GRIND
         </h3>
-        {history.map((w) => (
-          <div
-            key={w._id}
-            style={{
-              padding: "10px",
-              background: "#111",
-              marginBottom: "10px",
-              borderLeft: "3px solid white",
-            }}
-          >
-            <div style={{ fontWeight: "bold" }}>
-              {w.workoutName}{" "}
-              <span
-                style={{ fontSize: "0.8rem", color: "#666", float: "right" }}
+
+        {history.length === 0 ? (
+          <p style={{ color: "#444" }}>No logs yet.</p>
+        ) : (
+          history.map((w) => (
+            <div
+              key={w._id}
+              onClick={() => toggleCard(w._id)}
+              style={{
+                padding: "15px",
+                background: "#111",
+                marginBottom: "10px",
+                borderLeft:
+                  expandedId === w._id
+                    ? "3px solid #ef4444"
+                    : "3px solid white", // Red border when open
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {/* HEADER (Always Visible) */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
-                {new Date(w.date).toLocaleDateString()}
-              </span>
+                <div>
+                  <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                    {w.workoutName}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#888" }}>
+                    {new Date(w.date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div style={{ color: "#666" }}>
+                  {expandedId === w._id ? "🔼" : "🔽"}
+                </div>
+              </div>
+
+              {/* DETAILS (Visible only if Expanded) */}
+              {expandedId === w._id && (
+                <div
+                  style={{
+                    marginTop: "15px",
+                    borderTop: "1px solid #333",
+                    paddingTop: "10px",
+                  }}
+                >
+                  {w.exercises.map((ex, k) => (
+                    <div key={k} style={{ marginBottom: "10px" }}>
+                      <div
+                        style={{
+                          color: "#ef4444",
+                          fontSize: "0.9rem",
+                          fontWeight: "bold",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        {ex.name}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        {ex.sets.map((s, m) => (
+                          <span
+                            key={m}
+                            style={{
+                              backgroundColor: "#222",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.8rem",
+                              color: "#ccc",
+                            }}
+                          >
+                            {s.weight}kg x {s.reps}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: "0.8rem", color: "#888" }}>
-              {w.exercises.map((e) => e.name).join(", ")}
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
 }
 
+// Styles
 const cardStyle = {
   width: "100%",
   padding: "20px",
