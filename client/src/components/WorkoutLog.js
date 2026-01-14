@@ -8,6 +8,7 @@ import ShareableWorkoutCard from "./ShareableWorkoutCard";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import ExerciseChart from "./ExerciseChart";
+import StreakFire from "./StreakFire";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -238,22 +239,29 @@ export default function WorkoutLog({ apiBase, userId }) {
             borderBottom: "1px solid #333",
             paddingBottom: "15px",
             marginBottom: "5px",
+            flexWrap: "wrap", // Mobile ke liye
+            gap: "10px",
           }}
         >
-          <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
-            LOG SESSION
-          </h3>
-
+          {/* Left Side: Title + Streak */}
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
+              LOG SESSION
+            </h3>
+            <StreakFire history={history} /> {/* 👈 HERE IS THE FIRE */}
+          </div>
           {/* LOAD DROPDOWN */}
           <select
             onChange={(e) => handleLoadTemplate(e.target.value)}
             style={{
-              padding: "5px",
+              padding: "8px",
               background: "#222",
               color: "#fff",
               border: "1px solid #444",
               fontSize: "0.8rem",
-              width: "150px",
+              borderRadius: "5px",
+              outline: "none",
+              cursor: "pointer",
             }}
             defaultValue=""
           >
