@@ -6,8 +6,8 @@ import WorkoutLog from "../components/WorkoutLog";
 
 export default function Home() {
   // CONFIG
-  // const API_BASE = "https://progresstruth-api.onrender.com";
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "https://progresstruth-api.onrender.com";
+  // const API_BASE = "http://localhost:5000";
   const [userId, setUserId] = useState(null);
   const [activeTab, setActiveTab] = useState("checkin");
 
