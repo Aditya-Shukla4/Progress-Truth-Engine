@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import ProgressChart from "./ProgressChart";
 
 export default function CheckIn({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
 
-  // Tera purana form state
+  // FORM STATE
   const [checkInForm, setCheckInForm] = useState({
     currentWeight: "",
     avgSleep: "",
@@ -16,7 +17,7 @@ export default function CheckIn({ apiBase, userId }) {
     strengthTrend: "same",
   });
 
-  // 🔄 FETCH HISTORY (Tera purana logic wapas)
+  // 🔄 FETCH HISTORY
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/api/checkin/history/${userId}`);
@@ -27,11 +28,11 @@ export default function CheckIn({ apiBase, userId }) {
     }
   }, [apiBase, userId]);
 
-  // Load history on mount
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
+  // SUBMIT HANDLER
   const handleCheckInSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -47,7 +48,7 @@ export default function CheckIn({ apiBase, userId }) {
         });
         const data = await res.json();
         setResult(data);
-        fetchHistory(); // 🔄 List refresh
+        fetchHistory();
       } catch (err) {
         alert("Engine Failed!");
       }
@@ -57,6 +58,7 @@ export default function CheckIn({ apiBase, userId }) {
 
   return (
     <div>
+      {/* 1. RESULT OR FORM SECTION */}
       {result ? (
         <div
           style={{
@@ -143,7 +145,6 @@ export default function CheckIn({ apiBase, userId }) {
             }
             style={inputStyle}
           />
-
           <div style={{ display: "flex", gap: "10px" }}>
             <input
               name="avgSleep"
@@ -166,7 +167,6 @@ export default function CheckIn({ apiBase, userId }) {
               style={{ ...inputStyle, flex: 1 }}
             />
           </div>
-
           <select
             name="caloriesLevel"
             onChange={(e) =>
@@ -178,7 +178,6 @@ export default function CheckIn({ apiBase, userId }) {
             <option value="deficit">Deficit (Cutting)</option>
             <option value="surplus">Surplus (Bulking)</option>
           </select>
-
           <div style={{ display: "flex", gap: "10px" }}>
             <input
               name="workoutDays"
@@ -205,7 +204,6 @@ export default function CheckIn({ apiBase, userId }) {
               <option value="decreasing">Strength: Down ⬇️</option>
             </select>
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -216,8 +214,17 @@ export default function CheckIn({ apiBase, userId }) {
         </form>
       )}
 
-      {/* 📜 HISTORY SECTION (Tera ASLI wala wapas) */}
-      <div style={{ borderTop: "1px solid #333", paddingTop: "20px" }}>
+      {/* 📊 2. GRAPH SECTION (Placed BEFORE the list for better UI) */}
+      <ProgressChart data={history} />
+
+      {/* 📜 3. HISTORY LIST SECTION */}
+      <div
+        style={{
+          borderTop: "1px solid #333",
+          paddingTop: "20px",
+          marginTop: "20px",
+        }}
+      >
         <h3
           style={{
             color: "#666",
@@ -228,6 +235,7 @@ export default function CheckIn({ apiBase, userId }) {
         >
           Recent Evidence
         </h3>
+
         {history.length === 0 ? (
           <p style={{ color: "#444", fontSize: "0.8rem" }}>No records found.</p>
         ) : (
@@ -287,7 +295,7 @@ export default function CheckIn({ apiBase, userId }) {
   );
 }
 
-// Styling (Ye zaroori hai copy karna!)
+// Styling
 const inputStyle = {
   width: "100%",
   padding: "12px",
