@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import PersonalRecords from "./PersonalRecords";
-import { motion, AnimatePresence } from "framer-motion"; // 👈 Magic Import
+import { motion, AnimatePresence } from "framer-motion";
+import OneRepMax from "./OneRepMax";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -220,7 +221,8 @@ export default function WorkoutLog({ apiBase, userId }) {
           SAVE LOG
         </button>
       </form>
-
+      <OneRepMax />
+      <div style={{ marginTop: "20px" }}></div>
       {/* 🎬 HISTORY WITH ANIMATIONS */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
@@ -239,7 +241,7 @@ export default function WorkoutLog({ apiBase, userId }) {
           ) : (
             history.map((w) => (
               <motion.div
-                layout // 👈 Smooth shifting when items are deleted
+                layout
                 key={w._id}
                 initial={{ opacity: 0, y: 20 }} // Enter animation
                 animate={{ opacity: 1, y: 0 }}
