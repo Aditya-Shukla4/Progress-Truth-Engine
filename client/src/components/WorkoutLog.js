@@ -5,7 +5,7 @@ import PersonalRecords from "./PersonalRecords";
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
-  const [expandedId, setExpandedId] = useState(null); // 🟢 State to track open card
+  const [expandedId, setExpandedId] = useState(null); // 🟢 Kiska darwaza khula hai?
 
   const [log, setLog] = useState({
     workoutName: "",
@@ -73,10 +73,10 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLog({ ...log, exercises: newEx });
   };
 
-  // 🟢 Toggle Card Function
+  // 🟢 TOGGLE FUNCTION (Darwaza kholo/band karo)
   const toggleCard = (id) => {
-    if (expandedId === id) setExpandedId(null); // Close if already open
-    else setExpandedId(id); // Open this one
+    if (expandedId === id) setExpandedId(null); // Agar khula hai to band kar do
+    else setExpandedId(id); // Varna khol do
   };
 
   return (
@@ -189,10 +189,10 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* 📜 UPDATED HISTORY SECTION (Expandable) */}
+      {/* 📜 CLICKABLE HISTORY SECTION */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
-          RECENT GRIND
+          RECENT GRIND (TAP TO EXPAND)
         </h3>
 
         {history.length === 0 ? (
@@ -209,33 +209,20 @@ export default function WorkoutLog({ apiBase, userId }) {
                 borderLeft:
                   expandedId === w._id
                     ? "3px solid #ef4444"
-                    : "3px solid white", // Red border when open
+                    : "3px solid white",
                 cursor: "pointer",
-                transition: "all 0.2s",
               }}
             >
-              {/* HEADER (Always Visible) */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                    {w.workoutName}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#888" }}>
-                    {new Date(w.date).toLocaleDateString()}
-                  </div>
-                </div>
-                <div style={{ color: "#666" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontWeight: "bold" }}>{w.workoutName}</span>
+                <span style={{ color: "#666", fontSize: "0.8rem" }}>
+                  {new Date(w.date).toLocaleDateString()}{" "}
                   {expandedId === w._id ? "🔼" : "🔽"}
-                </div>
+                </span>
               </div>
 
-              {/* DETAILS (Visible only if Expanded) */}
+              {/* DETAILS (Sirf tab dikhega jab expandedId match karega) */}
               {expandedId === w._id && (
                 <div
                   style={{
@@ -250,33 +237,15 @@ export default function WorkoutLog({ apiBase, userId }) {
                         style={{
                           color: "#ef4444",
                           fontSize: "0.9rem",
-                          fontWeight: "bold",
-                          marginBottom: "5px",
+                          marginBottom: "2px",
                         }}
                       >
                         {ex.name}
                       </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                        }}
-                      >
-                        {ex.sets.map((s, m) => (
-                          <span
-                            key={m}
-                            style={{
-                              backgroundColor: "#222",
-                              padding: "4px 8px",
-                              borderRadius: "4px",
-                              fontSize: "0.8rem",
-                              color: "#ccc",
-                            }}
-                          >
-                            {s.weight}kg x {s.reps}
-                          </span>
-                        ))}
+                      <div style={{ color: "#ccc", fontSize: "0.8rem" }}>
+                        {ex.sets
+                          .map((s) => `${s.weight}kg x ${s.reps}`)
+                          .join(" | ")}
                       </div>
                     </div>
                   ))}
@@ -290,7 +259,6 @@ export default function WorkoutLog({ apiBase, userId }) {
   );
 }
 
-// Styles
 const cardStyle = {
   width: "100%",
   padding: "20px",

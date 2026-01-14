@@ -8,8 +8,22 @@ export default function PersonalRecords({ apiBase, userId }) {
     if (!userId) return;
     const fetchPRs = async () => {
       try {
+        // 👇 Yaha hum console mein print karenge URL
+        console.log(
+          "Fetching PRs from:",
+          `${apiBase}/api/workout/prs/${userId}`
+        );
+
         const res = await fetch(`${apiBase}/api/workout/prs/${userId}`);
-        if (res.ok) setPrs(await res.json());
+
+        if (res.ok) {
+          const data = await res.json();
+          // 👇 Yaha hum dekhenge ki data aaya kya?
+          console.log("🔥 PR DATA RECEIVED:", data);
+          setPrs(data);
+        } else {
+          console.error("❌ API Failed:", res.status);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -17,7 +31,21 @@ export default function PersonalRecords({ apiBase, userId }) {
     fetchPRs();
   }, [apiBase, userId]);
 
-  if (prs.length === 0) return null; // Agar koi record nahi hai toh kuch mat dikhao
+  if (prs.length === 0)
+    return (
+      <div
+        style={{
+          padding: "10px",
+          border: "1px dashed #444",
+          color: "#666",
+          marginBottom: "20px",
+          fontSize: "0.8rem",
+          textAlign: "center",
+        }}
+      >
+        No Personal Records yet. Log a heavy set!
+      </div>
+    );
 
   return (
     <div style={{ marginBottom: "20px" }}>
@@ -30,7 +58,7 @@ export default function PersonalRecords({ apiBase, userId }) {
           letterSpacing: "1px",
         }}
       >
-        🏆 Hall of Fame (PRs)
+        🏆 Hall of Fame
       </h3>
       <div
         style={{
