@@ -1,17 +1,22 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react"; // 👈 useRef add kiya
 import PersonalRecords from "./PersonalRecords";
-import RestTimer from "./RestTimer"; // Timer jo lagaya tha
-import OneRepMax from "./OneRepMax"; // 1RM Calc
-import MuscleSplitChart from "./MuscleSplitChart"; // 👈 NEW CHART
+import RestTimer from "./RestTimer";
+import OneRepMax from "./OneRepMax";
+import MuscleSplitChart from "./MuscleSplitChart";
+import ShareableWorkoutCard from "./ShareableWorkoutCard"; // 👈 NEW IMPORT
 import { motion, AnimatePresence } from "framer-motion";
+import html2canvas from "html2canvas"; // 👈 NEW IMPORT
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
 
-  // 🟢 LOG STATE UPDATED (Added targetMuscle)
+  // 📸 SHARE STATE
+  const shareCardRef = useRef(null);
+  const [shareData, setShareData] = useState(null);
+
   const [log, setLog] = useState({
     workoutName: "",
     exercises: [
@@ -43,7 +48,6 @@ export default function WorkoutLog({ apiBase, userId }) {
       });
       if (res.ok) {
         alert("Logged! 💪");
-        // Reset Form
         setLog({
           workoutName: "",
           exercises: [
@@ -62,7 +66,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 🗑️ DELETE FUNCTIONS (Same as before)
+  // 🗑️ DELETE FUNCTIONS
   const handleDeleteWorkout = async (e, workoutId) => {
     e.stopPropagation();
     if (!confirm("Pura Workout uda du?")) return;
@@ -107,7 +111,6 @@ export default function WorkoutLog({ apiBase, userId }) {
   };
 
   const updateEx = (idx, field, val) => {
-    // 👈 UPDATED HELPER
     const newEx = [...log.exercises];
     newEx[idx][field] = val;
     setLog({ ...log, exercises: newEx });
@@ -124,16 +127,65 @@ export default function WorkoutLog({ apiBase, userId }) {
     else setExpandedId(id);
   };
 
+  // 🧮 STATS CALCULATION FOR SHARE
+  const getWorkoutStats = (workout) => {
+    let totalVol = 0;
+    let best = { weight: 0, reps: 0, name: "" };
+
+    workout.exercises.forEach((ex) => {
+      ex.sets.forEach((set) => {
+        const w = parseFloat(set.weight) || 0;
+        const r = parseFloat(set.reps) || 0;
+        totalVol += w * r;
+        if (w > best.weight) {
+          best = { weight: w, reps: r, name: ex.name };
+        }
+      });
+    });
+    return { totalVolume: totalVol, bestLift: best.weight > 0 ? best : null };
+  };
+
+  // 📸 SHARE HANDLER
+  const handleShare = async (e, workout) => {
+    e.stopPropagation();
+
+    // 1. Data Ready Karo
+    const stats = getWorkoutStats(workout);
+    setShareData({ workout, ...stats });
+
+    // 2. Wait for Render & Capture
+    setTimeout(async () => {
+      if (shareCardRef.current) {
+        try {
+          const canvas = await html2canvas(shareCardRef.current, {
+            backgroundColor: null,
+            scale: 2, // High Quality
+          });
+
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `PTE_${workout.workoutName}.png`;
+          link.click();
+
+          setShareData(null); // Cleanup
+        } catch (err) {
+          console.error("Share failed:", err);
+          alert("Image generation failed.");
+        }
+      }
+    }, 200);
+  };
+
   return (
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
       <RestTimer />
-
-      {/* 🥧 NEW CHART SECTION */}
       <MuscleSplitChart history={history} />
-
-      {/* 🧪 1RM CALCULATOR */}
       <OneRepMax />
+
+      {/* 🤫 HIDDEN CARD FOR SHARING */}
+      <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
 
       {/* LOG FORM */}
       <form
@@ -183,7 +235,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                 style={{ ...inputStyle, flex: 2 }}
               />
 
-              {/* 🔽 MUSCLE SELECTOR */}
               <select
                 value={ex.targetMuscle}
                 onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
@@ -261,7 +312,7 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* HISTORY LIST (Same animated one) */}
+      {/* HISTORY WITH SHARE BUTTON */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
           RECENT GRIND
@@ -305,13 +356,28 @@ export default function WorkoutLog({ apiBase, userId }) {
                       {new Date(w.date).toLocaleDateString()}
                     </div>
                   </div>
+
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "15px",
+                      gap: "10px",
                     }}
                   >
+                    {/* 📸 SHARE BUTTON */}
+                    <button
+                      onClick={(e) => handleShare(e, w)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "1.2rem",
+                      }}
+                      title="Share Workout"
+                    >
+                      📸
+                    </button>
+
                     <button
                       onClick={(e) => handleDeleteWorkout(e, w._id)}
                       style={{
@@ -320,6 +386,7 @@ export default function WorkoutLog({ apiBase, userId }) {
                         cursor: "pointer",
                         fontSize: "1.2rem",
                       }}
+                      title="Delete Workout"
                     >
                       🗑️
                     </button>
