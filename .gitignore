@@ -1,0 +1,19 @@
+# Dependencies (Ye 200MB ka kooda hai, upload mat karna)
+node_modules/
+
+# Secrets (Ye hack ho sakta hai)
+.env
+
+# Build Files
+.next/
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Junk
+.DS_Store
+Thumbs.db
