@@ -7,6 +7,7 @@ import MuscleSplitChart from "./MuscleSplitChart";
 import ShareableWorkoutCard from "./ShareableWorkoutCard";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
+import ExerciseChart from "./ExerciseChart";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -211,6 +212,9 @@ export default function WorkoutLog({ apiBase, userId }) {
       <PersonalRecords apiBase={apiBase} userId={userId} />
       <RestTimer />
       <MuscleSplitChart history={history} />
+
+      <ExerciseChart history={history} />
+
       <OneRepMax />
       <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
 
