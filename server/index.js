@@ -6,12 +6,14 @@ const checkInRoutes = require("./routes/checkInRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 const userRoutes = require("./routes/userRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 app.use("/api/checkin", checkInRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/workout", workoutRoutes);
 
 // Database Connection
 mongoose
