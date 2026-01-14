@@ -2,30 +2,36 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 
-// CREATE USER (ONBOARDING)
+// CREATE OR LOGIN USER
 router.post("/create", async (req, res) => {
   try {
-    const { username, height, dietType, lactoseIntolerant, hostelOrHome } =
-      req.body;
+    const { username, email, height, dietType } = req.body;
 
-    // Naya user banao
-    const newUser = new User({
+    // 1. Check karo user pehle se hai kya? (Email se)
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User mil gaya -> Login successful
+      console.log("Existing User Login:", username);
+      return res.json(user);
+    }
+
+    // 2. Agar nahi mila -> Naya User banao
+    user = new User({
       username,
+      email,
       height,
       dietType,
-      lactoseIntolerant,
-      hostelOrHome,
     });
 
-    const savedUser = await newUser.save();
-
-    // Frontend ko ID wapas bhejo (Yehi ID LocalStorage me jayegi)
+    const savedUser = await user.save();
+    console.log("New User Created:", username);
     res.json(savedUser);
-    console.log("🔥 New User Created:", username);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "User creation failed" });
+    res.status(500).json({ error: "Server Error" });
   }
 });
 
 module.exports = router;
+  
