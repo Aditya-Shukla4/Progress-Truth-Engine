@@ -208,6 +208,36 @@ export default function WorkoutLog({ apiBase, userId }) {
     }, 200);
   };
 
+  // 👇 1. NEW FUNCTION: HANDLE REST DAY
+  const handleRestDay = async () => {
+    const confirmRest = confirm(
+      "Aaj pakka Rest Day hai? (Streak bach jayegi) 😴"
+    );
+    if (!confirmRest) return;
+
+    setLoading(true);
+    try {
+      // Hum ek Empty Workout bhejenge
+      const res = await fetch(`${apiBase}/api/workout/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          workoutName: "Active Recovery 😴", // Naam Rest Day
+          exercises: [], // Koi exercise nahi
+        }),
+      });
+
+      if (res.ok) {
+        alert("Rest Day Logged! Streak Saved. 🔥");
+        fetchHistory(); // History refresh
+      }
+    } catch (err) {
+      alert("Error logging rest day");
+    }
+    setLoading(false);
+  };
+
   return (
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
@@ -239,41 +269,63 @@ export default function WorkoutLog({ apiBase, userId }) {
             borderBottom: "1px solid #333",
             paddingBottom: "15px",
             marginBottom: "5px",
-            flexWrap: "wrap", // Mobile ke liye
+            flexWrap: "wrap",
             gap: "10px",
           }}
         >
           {/* Left Side: Title + Streak */}
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
               LOG SESSION
             </h3>
-            <StreakFire history={history} /> {/* 👈 HERE IS THE FIRE */}
+            <StreakFire history={history} />
           </div>
-          {/* LOAD DROPDOWN */}
-          <select
-            onChange={(e) => handleLoadTemplate(e.target.value)}
-            style={{
-              padding: "8px",
-              background: "#222",
-              color: "#fff",
-              border: "1px solid #444",
-              fontSize: "0.8rem",
-              borderRadius: "5px",
-              outline: "none",
-              cursor: "pointer",
-            }}
-            defaultValue=""
-          >
-            <option value="" disabled>
-              📂 Load Routine...
-            </option>
-            {templates.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.name}
+
+          {/* 👇 2. NEW BUTTONS SECTION (Rest Day + Load) */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {/* REST BUTTON */}
+            <button
+              type="button"
+              onClick={handleRestDay}
+              title="Log Rest Day to keep Streak alive"
+              style={{
+                background: "none",
+                border: "1px solid #444",
+                color: "#888",
+                padding: "5px 10px",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "0.8rem",
+              }}
+            >
+              😴 Rest
+            </button>
+
+            {/* DROPDOWN */}
+            <select
+              onChange={(e) => handleLoadTemplate(e.target.value)}
+              style={{
+                padding: "6px",
+                background: "#222",
+                color: "#fff",
+                border: "1px solid #444",
+                fontSize: "0.8rem",
+                borderRadius: "5px",
+                outline: "none",
+                cursor: "pointer",
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                📂 Load Routine...
               </option>
-            ))}
-          </select>
+              {templates.map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <input
