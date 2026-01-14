@@ -55,4 +55,15 @@ router.get("/prs/:userId", async (req, res) => {
   }
 });
 
+router.delete("/:id", async (req, res) => {
+  try {
+    const result = await Workout.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Workout nahi mila" });
+
+    res.json({ message: "Workout Deleted! 🗑️" });
+  } catch (err) {
+    res.status(500).json({ error: "Delete nahi ho paya" });
+  }
+});
+
 module.exports = router;

@@ -5,7 +5,7 @@ import PersonalRecords from "./PersonalRecords";
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
-  const [expandedId, setExpandedId] = useState(null); // 🟢 Kiska darwaza khula hai?
+  const [expandedId, setExpandedId] = useState(null);
 
   const [log, setLog] = useState({
     workoutName: "",
@@ -48,7 +48,26 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // UI Helpers
+  // 🗑️ DELETE FUNCTION (NEW)
+  const handleDelete = async (e, workoutId) => {
+    e.stopPropagation(); // Card khulne se roko (sirf delete karo)
+    if (!confirm("Pakka delete karna hai?")) return; // Galti se click na ho jaye
+
+    try {
+      const res = await fetch(`${apiBase}/api/workout/${workoutId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchHistory(); // List refresh karo
+      } else {
+        alert("Delete failed!");
+      }
+    } catch (err) {
+      alert("Server Error");
+    }
+  };
+
+  // UI Helpers... (Same as before)
   const addExercise = () =>
     setLog({
       ...log,
@@ -72,19 +91,16 @@ export default function WorkoutLog({ apiBase, userId }) {
     newEx[exIdx].sets[sIdx][field] = val;
     setLog({ ...log, exercises: newEx });
   };
-
-  // 🟢 TOGGLE FUNCTION (Darwaza kholo/band karo)
   const toggleCard = (id) => {
-    if (expandedId === id) setExpandedId(null); // Agar khula hai to band kar do
-    else setExpandedId(id); // Varna khol do
+    if (expandedId === id) setExpandedId(null);
+    else setExpandedId(id);
   };
 
   return (
     <div>
-      {/* 🏆 PR SECTION */}
       <PersonalRecords apiBase={apiBase} userId={userId} />
 
-      {/* 📝 LOG FORM */}
+      {/* LOG FORM */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -189,10 +205,10 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* 📜 CLICKABLE HISTORY SECTION */}
+      {/* HISTORY WITH DELETE */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
-          RECENT GRIND (TAP TO EXPAND)
+          RECENT GRIND
         </h3>
 
         {history.length === 0 ? (
@@ -213,16 +229,44 @@ export default function WorkoutLog({ apiBase, userId }) {
                 cursor: "pointer",
               }}
             >
-              {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontWeight: "bold" }}>{w.workoutName}</span>
-                <span style={{ color: "#666", fontSize: "0.8rem" }}>
-                  {new Date(w.date).toLocaleDateString()}{" "}
-                  {expandedId === w._id ? "🔼" : "🔽"}
-                </span>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                    {w.workoutName}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#888" }}>
+                    {new Date(w.date).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "15px" }}
+                >
+                  {/* 🗑️ DELETE BUTTON */}
+                  <button
+                    onClick={(e) => handleDelete(e, w._id)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "1.2rem",
+                    }}
+                    title="Delete Log"
+                  >
+                    🗑️
+                  </button>
+                  <div style={{ color: "#666" }}>
+                    {expandedId === w._id ? "🔼" : "🔽"}
+                  </div>
+                </div>
               </div>
 
-              {/* DETAILS (Sirf tab dikhega jab expandedId match karega) */}
               {expandedId === w._id && (
                 <div
                   style={{
@@ -259,6 +303,7 @@ export default function WorkoutLog({ apiBase, userId }) {
   );
 }
 
+// Styles (Same as before)
 const cardStyle = {
   width: "100%",
   padding: "20px",
