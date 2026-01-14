@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import PersonalRecords from "./PersonalRecords";
+import { motion, AnimatePresence } from "framer-motion"; // 👈 Magic Import
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -62,20 +63,18 @@ export default function WorkoutLog({ apiBase, userId }) {
     }
   };
 
-  // 🔪 DELETE SINGLE EXERCISE (NEW FEATURE)
+  // 🔪 DELETE SINGLE EXERCISE
   const handleDeleteExercise = async (e, workoutId, exerciseId) => {
-    e.stopPropagation(); // Parent click mat hone do
+    e.stopPropagation();
     if (!confirm("Sirf ye exercise hatani hai?")) return;
 
     try {
       const res = await fetch(
         `${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`,
-        {
-          method: "DELETE",
-        }
+        { method: "DELETE" }
       );
       if (res.ok) {
-        fetchHistory(); // List refresh karo
+        fetchHistory();
       } else {
         alert("Delete failed!");
       }
@@ -84,7 +83,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     }
   };
 
-  // UI Helpers (Same as before)
+  // UI Helpers
   const addExercise = () =>
     setLog({
       ...log,
@@ -222,145 +221,163 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* HISTORY WITH MICRO-DELETE */}
+      {/* 🎬 HISTORY WITH ANIMATIONS */}
       <div style={{ marginTop: "20px" }}>
         <h3 style={{ color: "#666", fontSize: "0.8rem", marginBottom: "10px" }}>
           RECENT GRIND
         </h3>
 
-        {history.length === 0 ? (
-          <p style={{ color: "#444" }}>No logs yet.</p>
-        ) : (
-          history.map((w) => (
-            <div
-              key={w._id}
-              onClick={() => toggleCard(w._id)}
-              style={{
-                padding: "15px",
-                background: "#111",
-                marginBottom: "10px",
-                borderLeft:
-                  expandedId === w._id
-                    ? "3px solid #ef4444"
-                    : "3px solid white",
-                cursor: "pointer",
-              }}
+        <AnimatePresence mode="popLayout">
+          {history.length === 0 ? (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              style={{ color: "#444" }}
             >
-              <div
+              No logs yet.
+            </motion.p>
+          ) : (
+            history.map((w) => (
+              <motion.div
+                layout // 👈 Smooth shifting when items are deleted
+                key={w._id}
+                initial={{ opacity: 0, y: 20 }} // Enter animation
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }} // Exit animation (Shrink)
+                onClick={() => toggleCard(w._id)}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  padding: "15px",
+                  background: "#111",
+                  marginBottom: "10px",
+                  borderLeft:
+                    expandedId === w._id
+                      ? "3px solid #ef4444"
+                      : "3px solid white",
+                  cursor: "pointer",
+                  overflow: "hidden", // Important for height animation
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                    {w.workoutName}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#888" }}>
-                    {new Date(w.date).toLocaleDateString()}
-                  </div>
-                </div>
-
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "15px" }}
-                >
-                  {/* 🗑️ BIG DELETE (Pura Workout) */}
-                  <button
-                    onClick={(e) => handleDeleteWorkout(e, w._id)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "1.2rem",
-                    }}
-                    title="Delete Whole Workout"
-                  >
-                    🗑️
-                  </button>
-                  <div style={{ color: "#666" }}>
-                    {expandedId === w._id ? "🔼" : "🔽"}
-                  </div>
-                </div>
-              </div>
-
-              {/* EXERCISE LIST */}
-              {expandedId === w._id && (
+                {/* Header */}
                 <div
                   style={{
-                    marginTop: "15px",
-                    borderTop: "1px solid #333",
-                    paddingTop: "10px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  {w.exercises.map((ex, k) => (
-                    <div
-                      key={k}
+                  <div>
+                    <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                      {w.workoutName}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#888" }}>
+                      {new Date(w.date).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "15px",
+                    }}
+                  >
+                    <button
+                      onClick={(e) => handleDeleteWorkout(e, w._id)}
                       style={{
-                        marginBottom: "10px",
-                        paddingBottom: "10px",
-                        borderBottom:
-                          k === w.exercises.length - 1
-                            ? "none"
-                            : "1px dashed #222",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "1.2rem",
+                      }}
+                      title="Delete Whole Workout"
+                    >
+                      🗑️
+                    </button>
+                    <div style={{ color: "#666" }}>
+                      {expandedId === w._id ? "🔼" : "🔽"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🎬 Expanded Details Animation */}
+                <AnimatePresence>
+                  {expandedId === w._id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      style={{
+                        marginTop: "15px",
+                        borderTop: "1px solid #333",
+                        paddingTop: "10px",
                       }}
                     >
-                      {/* Exercise Header with Small Delete */}
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
+                      {w.exercises.map((ex, k) => (
                         <div
+                          key={k}
                           style={{
-                            color: "#ef4444",
-                            fontSize: "0.9rem",
-                            marginBottom: "2px",
-                            fontWeight: "bold",
+                            marginBottom: "10px",
+                            paddingBottom: "10px",
+                            borderBottom:
+                              k === w.exercises.length - 1
+                                ? "none"
+                                : "1px dashed #222",
                           }}
                         >
-                          {ex.name}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                color: "#ef4444",
+                                fontSize: "0.9rem",
+                                marginBottom: "2px",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {ex.name}
+                            </div>
+                            <button
+                              onClick={(e) =>
+                                handleDeleteExercise(e, w._id, ex._id)
+                              }
+                              style={{
+                                background: "#222",
+                                border: "1px solid #333",
+                                color: "#888",
+                                cursor: "pointer",
+                                fontSize: "0.7rem",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              ✕ Remove
+                            </button>
+                          </div>
+                          <div
+                            style={{
+                              color: "#ccc",
+                              fontSize: "0.8rem",
+                              marginTop: "5px",
+                            }}
+                          >
+                            {ex.sets
+                              .map((s) => `${s.weight}kg x ${s.reps}`)
+                              .join(" | ")}
+                          </div>
                         </div>
-
-                        {/* 🔪 SMALL DELETE (Sirf Exercise) */}
-                        <button
-                          onClick={(e) =>
-                            handleDeleteExercise(e, w._id, ex._id)
-                          }
-                          style={{
-                            background: "#222",
-                            border: "1px solid #333",
-                            color: "#888",
-                            cursor: "pointer",
-                            fontSize: "0.7rem",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          ✕ Remove
-                        </button>
-                      </div>
-
-                      <div
-                        style={{
-                          color: "#ccc",
-                          fontSize: "0.8rem",
-                          marginTop: "5px",
-                        }}
-                      >
-                        {ex.sets
-                          .map((s) => `${s.weight}kg x ${s.reps}`)
-                          .join(" | ")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

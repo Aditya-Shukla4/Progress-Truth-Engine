@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import Onboarding from "../components/Onboarding";
 import CheckIn from "../components/CheckIn";
 import WorkoutLog from "../components/WorkoutLog";
+import { motion, AnimatePresence } from "framer-motion"; // 👈 MAGIC IMPORT
 
 export default function Home() {
   // CONFIG
   const API_BASE = "https://progresstruth-api.onrender.com";
   // const API_BASE = "http://localhost:5000";
+
   const [userId, setUserId] = useState(null);
   const [activeTab, setActiveTab] = useState("checkin");
 
@@ -37,9 +39,14 @@ export default function Home() {
         alignItems: "center",
         padding: "20px",
         fontFamily: "monospace",
+        overflowX: "hidden", // 👈 ZAROORI: Slide ke waqt scrollbar na aaye
       }}
     >
-      <h1
+      {/* 🎬 ANIMATED TITLE */}
+      <motion.h1
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100 }}
         style={{
           color: "#ef4444",
           fontSize: "2rem",
@@ -50,7 +57,7 @@ export default function Home() {
         }}
       >
         PROGRESS TRUTH ENGINE
-      </h1>
+      </motion.h1>
 
       {!userId ? (
         <Onboarding apiBase={API_BASE} onLogin={handleLogin} />
@@ -83,7 +90,7 @@ export default function Home() {
             </button>
           </div>
 
-          {/* TABS (Ye Naya Feature Hai) */}
+          {/* TABS */}
           <div
             style={{
               display: "flex",
@@ -101,6 +108,7 @@ export default function Home() {
                 border: "none",
                 fontWeight: "bold",
                 cursor: "pointer",
+                transition: "all 0.3s", // Smooth color change
               }}
             >
               WEEKLY TRUTH
@@ -115,18 +123,37 @@ export default function Home() {
                 border: "none",
                 fontWeight: "bold",
                 cursor: "pointer",
+                transition: "all 0.3s",
               }}
             >
               DAILY GRIND
             </button>
           </div>
 
-          {/* CONTENT */}
-          {activeTab === "checkin" ? (
-            <CheckIn apiBase={API_BASE} userId={userId} />
-          ) : (
-            <WorkoutLog apiBase={API_BASE} userId={userId} />
-          )}
+          {/* 🎬 SLIDING CONTENT */}
+          <AnimatePresence mode="wait">
+            {activeTab === "checkin" ? (
+              <motion.div
+                key="checkin"
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 20, opacity: 0 }} // Left se aayega, Right jayega
+                transition={{ duration: 0.2 }}
+              >
+                <CheckIn apiBase={API_BASE} userId={userId} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="workout"
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -20, opacity: 0 }} // Right se aayega, Left jayega
+                transition={{ duration: 0.2 }}
+              >
+                <WorkoutLog apiBase={API_BASE} userId={userId} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
