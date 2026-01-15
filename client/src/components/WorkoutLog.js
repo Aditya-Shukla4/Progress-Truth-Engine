@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import ExerciseChart from "./ExerciseChart";
 import StreakFire from "./StreakFire";
+import PlateCalculator from "./PlateCalculator";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
@@ -242,6 +243,9 @@ export default function WorkoutLog({ apiBase, userId }) {
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
       <RestTimer />
+
+      <PlateCalculator />
+
       <MuscleSplitChart history={history} />
 
       <ExerciseChart history={history} />
