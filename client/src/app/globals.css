@@ -1,46 +1,81 @@
 @import "tailwindcss";
 
-/* 👇 YE ZAROORI HAI: Colors ko force karne ke liye */
-@layer utilities {
-  .text-red-500 {
-    color: #ef4444;
-  }
-  .bg-red-600 {
-    background-color: #dc2626;
-  }
-  .hover\:bg-red-700:hover {
-    background-color: #b91c1c;
-  }
-  .border-red-600 {
-    border-color: #dc2626;
-  }
-  .bg-red-900\/20 {
-    background-color: rgba(127, 29, 29, 0.2);
-  }
+/* 👇 THEME VARIABLES */
+@theme {
+  --color-neon-red: #ef4444;
+  --color-neon-green: #22c55e;
+}
 
-  .text-yellow-400 {
-    color: #facc15;
-  }
-  .border-yellow-500 {
-    border-color: #eab308;
-  }
-  .bg-yellow-900\/20 {
-    background-color: rgba(113, 63, 18, 0.2);
-  }
-
-  .text-green-500 {
-    color: #22c55e;
-  }
-  .border-green-500 {
-    border-color: #22c55e;
-  }
-  .bg-green-900\/20 {
-    background-color: rgba(20, 83, 45, 0.2);
-  }
+/* 👇 CUSTOM VARIABLES */
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --neon-red: #ef4444;
+  --neon-green: #22c55e;
 }
 
 body {
-  background-color: #000000;
-  color: #ffffff;
-  font-family: monospace;
+  color: var(--foreground);
+  background: radial-gradient(circle at 50% 10%, #1a1a1a 0%, #000000 100%);
+  font-family: "Courier New", Courier, monospace; /* Hacker Font */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* 🔥 SCROLLBAR HIDE KARO */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* 🧊 GLASS CARD CLASS */
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+}
+
+/* ⌨️ INPUT FIELDS */
+.cyber-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #333;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.cyber-input:focus {
+  border-color: var(--neon-red);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+/* 🚨 GLOWING BUTTON */
+.neon-btn {
+  background: linear-gradient(45deg, #ef4444, #b91c1c);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.neon-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
 }
