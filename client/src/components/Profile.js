@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import TruthCalendar from "./TruthCalendar"; // 👈 IMPORT ADDED
 
 export default function Profile({ apiBase, userId, onLogout }) {
   const [user, setUser] = useState({
@@ -10,6 +11,7 @@ export default function Profile({ apiBase, userId, onLogout }) {
     targetWeight: "",
     dietType: "Non-Veg",
   });
+  const [history, setHistory] = useState([]); // 👈 HISTORY STATE
   const [stats, setStats] = useState({ totalWorkouts: 0, totalVolume: 0 });
   const [loading, setLoading] = useState(false);
 
@@ -24,11 +26,12 @@ export default function Profile({ apiBase, userId, onLogout }) {
         // B. Get History for Stats Calculation
         const histRes = await fetch(`${apiBase}/api/workout/history/${userId}`);
         if (histRes.ok) {
-          const history = await histRes.json();
+          const histData = await histRes.json();
+          setHistory(histData); // 👈 SAVE HISTORY HERE FOR CALENDAR
 
           // 🧮 CALCULATE LIFETIME STATS
           let vol = 0;
-          history.forEach((w) => {
+          histData.forEach((w) => {
             w.exercises.forEach((ex) => {
               ex.sets.forEach((s) => {
                 vol += (Number(s.weight) || 0) * (Number(s.reps) || 0);
@@ -37,7 +40,7 @@ export default function Profile({ apiBase, userId, onLogout }) {
           });
 
           setStats({
-            totalWorkouts: history.length,
+            totalWorkouts: histData.length,
             totalVolume: vol,
           });
         }
@@ -65,8 +68,7 @@ export default function Profile({ apiBase, userId, onLogout }) {
       if (res.ok) {
         const data = await res.json();
         if (data) {
-          // 👈 Check ki data null to nahi hai?
-          setUser(data); // Sirf tab update karo jab data asli ho
+          setUser(data);
           alert("Profile Updated! ✅");
         } else {
           alert("User not found in DB. Please Logout.");
@@ -114,7 +116,6 @@ export default function Profile({ apiBase, userId, onLogout }) {
           {user.email}
         </p>
       </div>
-
       {/* 🏆 LIFETIME STATS CARDS */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
         <div style={statCardStyle}>
@@ -150,11 +151,17 @@ export default function Profile({ apiBase, userId, onLogout }) {
           </div>
         </div>
       </div>
-
+      {/* 📅 THE TRUTH CALENDAR (HERE) */}
+      <TruthCalendar history={history} /> {/* 👈 CALENDAR ADDED */}
       {/* ⚙️ SETTINGS FORM */}
       <form
         onSubmit={handleUpdate}
-        style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+          marginTop: "30px",
+        }}
       >
         <h3
           style={{
@@ -207,7 +214,6 @@ export default function Profile({ apiBase, userId, onLogout }) {
           {loading ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </form>
-
       {/* 🚪 LOGOUT BUTTON */}
       <button
         onClick={onLogout}
