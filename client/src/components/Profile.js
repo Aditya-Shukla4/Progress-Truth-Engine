@@ -1,35 +1,63 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import TruthCalendar from "./TruthCalendar"; // 👈 IMPORT ADDED
+import TruthCalendar from "./TruthCalendar";
 
 export default function Profile({ apiBase, userId, onLogout }) {
-  const [user, setUser] = useState({
-    name: "",
-    email: "",
-    height: "",
-    targetWeight: "",
-    dietType: "Non-Veg",
-  });
-  const [history, setHistory] = useState([]); // 👈 HISTORY STATE
+  const [user, setUser] = useState(null);
+  const [history, setHistory] = useState([]);
   const [stats, setStats] = useState({ totalWorkouts: 0, totalVolume: 0 });
   const [loading, setLoading] = useState(false);
 
-  // 1. FETCH DATA (User Info + Stats)
+  // 🎮 RPG LEVEL LOGIC
+  const getLevelInfo = (volume) => {
+    if (volume < 10000)
+      return {
+        name: "Broccoli Head 🥦",
+        color: "#a3e635",
+        next: 10000,
+        desc: "Newbie gains loading...",
+      };
+    if (volume < 50000)
+      return {
+        name: "Gym Rat 🐀",
+        color: "#60a5fa",
+        next: 50000,
+        desc: "Consistency is key!",
+      };
+    if (volume < 200000)
+      return {
+        name: "Iron Addict ⛓️",
+        color: "#facc15",
+        next: 200000,
+        desc: "Respect earned.",
+      };
+    if (volume < 1000000)
+      return {
+        name: "Silverback 🦍",
+        color: "#ef4444",
+        next: 1000000,
+        desc: "Beast mode activated.",
+      };
+    return {
+      name: "GREEK GOD ⚡",
+      color: "#c084fc",
+      next: 10000000,
+      desc: "You completed the gym.",
+    };
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        // A. Get User Details
         const userRes = await fetch(`${apiBase}/api/user/${userId}`);
         if (userRes.ok) setUser(await userRes.json());
 
-        // B. Get History for Stats Calculation
         const histRes = await fetch(`${apiBase}/api/workout/history/${userId}`);
         if (histRes.ok) {
           const histData = await histRes.json();
-          setHistory(histData); // 👈 SAVE HISTORY HERE FOR CALENDAR
+          setHistory(histData);
 
-          // 🧮 CALCULATE LIFETIME STATS
           let vol = 0;
           histData.forEach((w) => {
             w.exercises.forEach((ex) => {
@@ -39,10 +67,7 @@ export default function Profile({ apiBase, userId, onLogout }) {
             });
           });
 
-          setStats({
-            totalWorkouts: histData.length,
-            totalVolume: vol,
-          });
+          setStats({ totalWorkouts: histData.length, totalVolume: vol });
         }
       } catch (err) {
         console.error("Profile load fail");
@@ -51,7 +76,6 @@ export default function Profile({ apiBase, userId, onLogout }) {
     loadData();
   }, [apiBase, userId]);
 
-  // 2. SAVE UPDATES
   const handleUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -66,13 +90,8 @@ export default function Profile({ apiBase, userId, onLogout }) {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          setUser(data);
-          alert("Profile Updated! ✅");
-        } else {
-          alert("User not found in DB. Please Logout.");
-        }
+        setUser(await res.json());
+        alert("Profile Updated! ✅");
       }
     } catch (err) {
       alert("Update failed");
@@ -81,11 +100,10 @@ export default function Profile({ apiBase, userId, onLogout }) {
   };
 
   if (!user)
-    return (
-      <div style={{ padding: "20px", color: "white" }}>
-        Loading Profile... (or User not found)
-      </div>
-    );
+    return <div style={{ padding: "20px", color: "white" }}>Loading...</div>;
+
+  const level = getLevelInfo(stats.totalVolume);
+  const progressPercent = Math.min((stats.totalVolume / level.next) * 100, 100);
 
   return (
     <motion.div
@@ -93,8 +111,18 @@ export default function Profile({ apiBase, userId, onLogout }) {
       animate={{ opacity: 1 }}
       style={{ padding: "20px", color: "white" }}
     >
-      {/* HEADER */}
-      <div style={{ textAlign: "center", marginBottom: "30px" }}>
+      {/* HEADER & LEVEL CARD */}
+      <div
+        style={{
+          textAlign: "center",
+          marginBottom: "30px",
+          background:
+            "linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(30,30,30,0.5) 100%)",
+          padding: "20px",
+          borderRadius: "15px",
+          border: "1px solid #333",
+        }}
+      >
         <div
           style={{
             width: "80px",
@@ -107,16 +135,74 @@ export default function Profile({ apiBase, userId, onLogout }) {
             justifyContent: "center",
             fontSize: "2rem",
             fontWeight: "bold",
+            border: `3px solid ${level.color}`,
           }}
         >
           {user.name ? user.name[0].toUpperCase() : "U"}
         </div>
         <h2 style={{ margin: 0, fontSize: "1.5rem" }}>{user.name}</h2>
-        <p style={{ margin: 0, color: "#888", fontSize: "0.9rem" }}>
-          {user.email}
+
+        {/* RANK BADGE */}
+        <div style={{ marginTop: "10px" }}>
+          <span
+            style={{
+              background: level.color,
+              color: "black",
+              padding: "5px 10px",
+              borderRadius: "20px",
+              fontSize: "0.8rem",
+              fontWeight: "900",
+              textTransform: "uppercase",
+            }}
+          >
+            {level.name}
+          </span>
+        </div>
+        <p
+          style={{
+            marginTop: "10px",
+            color: "#888",
+            fontSize: "0.8rem",
+            fontStyle: "italic",
+          }}
+        >
+          "{level.desc}"
         </p>
+
+        {/* PROGRESS BAR */}
+        <div style={{ marginTop: "20px", textAlign: "left" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.7rem",
+              color: "#aaa",
+              marginBottom: "5px",
+            }}
+          >
+            <span>XP: {(stats.totalVolume / 1000).toFixed(1)}k</span>
+            <span>Next: {(level.next / 1000).toFixed(0)}k</span>
+          </div>
+          <div
+            style={{
+              width: "100%",
+              height: "8px",
+              background: "#333",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 1 }}
+              style={{ height: "100%", background: level.color }}
+            />
+          </div>
+        </div>
       </div>
-      {/* 🏆 LIFETIME STATS CARDS */}
+
+      {/* STATS */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
         <div style={statCardStyle}>
           <div
@@ -151,9 +237,10 @@ export default function Profile({ apiBase, userId, onLogout }) {
           </div>
         </div>
       </div>
-      {/* 📅 THE TRUTH CALENDAR (HERE) */}
-      <TruthCalendar history={history} /> {/* 👈 CALENDAR ADDED */}
-      {/* ⚙️ SETTINGS FORM */}
+
+      <TruthCalendar history={history} />
+
+      {/* SETTINGS */}
       <form
         onSubmit={handleUpdate}
         style={{
@@ -173,7 +260,6 @@ export default function Profile({ apiBase, userId, onLogout }) {
         >
           ⚙️ SETTINGS
         </h3>
-
         <div>
           <label style={labelStyle}>Height (cm)</label>
           <input
@@ -181,10 +267,8 @@ export default function Profile({ apiBase, userId, onLogout }) {
             value={user.height || ""}
             onChange={(e) => setUser({ ...user, height: e.target.value })}
             style={inputStyle}
-            placeholder="e.g. 175"
           />
         </div>
-
         <div>
           <label style={labelStyle}>Target Weight (kg)</label>
           <input
@@ -192,10 +276,8 @@ export default function Profile({ apiBase, userId, onLogout }) {
             value={user.targetWeight || ""}
             onChange={(e) => setUser({ ...user, targetWeight: e.target.value })}
             style={inputStyle}
-            placeholder="e.g. 75"
           />
         </div>
-
         <div>
           <label style={labelStyle}>Diet Type</label>
           <select
@@ -203,18 +285,17 @@ export default function Profile({ apiBase, userId, onLogout }) {
             onChange={(e) => setUser({ ...user, dietType: e.target.value })}
             style={inputStyle}
           >
-            <option value="Non-Veg">Non-Veg (Chicken/Meat)</option>
+            <option value="Non-Veg">Non-Veg</option>
             <option value="Eggetarian">Eggetarian</option>
             <option value="Vegetarian">Vegetarian</option>
             <option value="Vegan">Vegan</option>
           </select>
         </div>
-
         <button type="submit" disabled={loading} style={btnStyle}>
           {loading ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </form>
-      {/* 🚪 LOGOUT BUTTON */}
+
       <button
         onClick={onLogout}
         style={{
