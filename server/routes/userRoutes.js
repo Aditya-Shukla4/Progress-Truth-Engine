@@ -1,30 +1,31 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const bcrypt = require("bcryptjs"); // Password hash ke liye
-const jwt = require("jsonwebtoken"); // Login token ke liye
+const bcrypt = require("bcryptjs");
 
 // ==========================================
-// 🔐 AUTH ROUTES (Login/Register)
+// 1️⃣ MANUAL REGISTER (Email + Password)
 // ==========================================
-
-// 1. REGISTER
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, height, targetWeight, dietType } = req.body;
 
-    // Check user
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ error: "User already exists" });
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Save User
-    user = new User({ name, email, password: hashedPassword });
-    await user.save();
+    user = new User({
+      username: name,
+      email,
+      password: hashedPassword, // 🔐 Password Save hoga
+      height: height || 0,
+      targetWeight: targetWeight || 0,
+      dietType: dietType || "Non-Veg",
+    });
 
+    await user.save();
     res.json({ message: "User Registered", userId: user._id });
   } catch (err) {
     console.error(err);
@@ -32,24 +33,28 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// 2. LOGIN
+// ==========================================
+// 2️⃣ MANUAL LOGIN (Email + Password)
+// ==========================================
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check user
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "Invalid Credentials" });
 
-    // Check password
+    // 🛑 Password Check Zaroori Hai
+    // Agar user Google se bana tha, toh uska password empty hoga, isliye ye fail hoga (Sahi hai)
+    if (!user.password)
+      return res.status(400).json({ error: "Please use Google Login" });
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: "Invalid Credentials" });
 
-    // Return Data
     res.json({
       message: "Login Success",
       userId: user._id,
-      name: user.name,
+      name: user.username,
     });
   } catch (err) {
     console.error(err);
@@ -58,33 +63,67 @@ router.post("/login", async (req, res) => {
 });
 
 // ==========================================
-// 👤 PROFILE ROUTES (New Update)
+// 3️⃣ GOOGLE LOGIN (No Password) 🆕
 // ==========================================
+router.post("/google", async (req, res) => {
+  try {
+    const { email, name } = req.body;
 
-// 3. GET USER DETAILS
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // A. USER HAI -> Login karwa do (Password check mat karo)
+      return res.json({
+        message: "Google Login Success",
+        userId: user._id,
+        name: user.username,
+      });
+    } else {
+      // B. USER NAHI HAI -> Naya banao (Password Empty rakho)
+      user = new User({
+        username: name,
+        email: email,
+        password: "", // 👈 Password Khali
+        height: 0,
+        targetWeight: 0,
+        dietType: "Non-Veg",
+      });
+      await user.save();
+
+      return res.json({
+        message: "Google Signup Success",
+        userId: user._id,
+      });
+    }
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(500).json({ error: "Google Login Failed" });
+  }
+});
+
+// ==========================================
+// 4️⃣ PROFILE ROUTES (Common for All)
+// ==========================================
 router.get("/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Server Error" });
   }
 });
 
-// 4. UPDATE USER DETAILS
 router.put("/:id", async (req, res) => {
   try {
     const { height, targetWeight, dietType } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { height, targetWeight, dietType },
-      { new: true } // Return updated doc
+      { new: true }
     ).select("-password");
     res.json(updatedUser);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Update failed" });
   }
 });

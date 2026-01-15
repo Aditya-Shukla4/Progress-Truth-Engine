@@ -12,7 +12,7 @@ const CheckInSchema = new mongoose.Schema({
   workoutDays: { type: Number, required: true },
   strengthTrend: { type: String, enum: ["increasing", "same", "decreasing"] },
 
-  // Truth Engine Output (Stored History)
+  // Truth Engine Output
   status: { type: String, enum: ["RED", "YELLOW", "GREEN"] },
   resultMessage: { type: String },
   actionStep: { type: String },

@@ -7,8 +7,8 @@ import Profile from "../components/Profile"; // 👈 NEW IMPORT
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
-  const API_BASE = "https://progresstruth-api.onrender.com";
-  // const API_BASE = "http://localhost:5000";
+  // const API_BASE = "https://progresstruth-api.onrender.com";
+  const API_BASE = "http://localhost:5000";
 
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState("U"); // Avatar ke liye

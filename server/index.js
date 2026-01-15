@@ -3,19 +3,21 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
-// 👇 1. IMPORT (Ye line check kar, upar honi chahiye)
+// IMPORT ROUTES
 const userRoutes = require("./routes/userRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
-const templateRoutes = require("./routes/templateRoutes"); // 👈 YE ADD KAR
+const templateRoutes = require("./routes/templateRoutes");
+const checkinRoutes = require("./routes/checkInRoutes"); // 👈 NEW ADDITION ✅
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 👇 2. ENABLE ROUTE (Ye line check kar, neeche honi chahiye)
+// ENABLE ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/workout", workoutRoutes);
-app.use("/api/template", templateRoutes); // 👈 YE BHI ADD KAR (Iske bina 404 aayega)
+app.use("/api/template", templateRoutes);
+app.use("/api/checkin", checkinRoutes); // 👈 NEW CONNECTION ✅
 
 mongoose
   .connect(process.env.MONGO_URI)
