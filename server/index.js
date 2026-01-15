@@ -7,7 +7,7 @@ require("dotenv").config();
 const userRoutes = require("./routes/userRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const templateRoutes = require("./routes/templateRoutes");
-const checkinRoutes = require("./routes/checkinRoutes"); // 👈 Small 'i' rakha hai safety ke liye
+const checkinRoutes = require("./routes/checkinRoutes"); //
 
 const app = express();
 app.use(cors());
