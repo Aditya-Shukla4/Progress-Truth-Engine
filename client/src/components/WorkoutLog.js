@@ -10,11 +10,12 @@ import html2canvas from "html2canvas";
 import ExerciseChart from "./ExerciseChart";
 import StreakFire from "./StreakFire";
 import PlateCalculator from "./PlateCalculator";
+import confetti from "canvas-confetti"; // 👈 NEW: IMPORT CONFETTI
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
-  const [templates, setTemplates] = useState([]); // 👈 Store Templates
+  const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
 
   // Share State
@@ -28,14 +29,31 @@ export default function WorkoutLog({ apiBase, userId }) {
     ],
   });
 
+  // 🔊 SOUND FUNCTION (The Ding!)
+  const playSuccessSound = () => {
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
+    ); // Google's free sound
+    audio.volume = 0.5;
+    audio.play().catch((e) => console.log("Audio play failed"));
+  };
+
+  // 🎉 CONFETTI FUNCTION (The Party!)
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ["#ef4444", "#ffffff", "#000000"], // Red, White, Black theme
+    });
+  };
+
   // 1. FETCH HISTORY & TEMPLATES
   const fetchData = useCallback(async () => {
     try {
-      // Fetch History
       const resHist = await fetch(`${apiBase}/api/workout/history/${userId}`);
       if (resHist.ok) setHistory(await resHist.json());
 
-      // Fetch Templates 👈 NEW
       const resTemp = await fetch(`${apiBase}/api/template/${userId}`);
       if (resTemp.ok) setTemplates(await resTemp.json());
     } catch (err) {
@@ -58,6 +76,10 @@ export default function WorkoutLog({ apiBase, userId }) {
         body: JSON.stringify({ ...log, userId }),
       });
       if (res.ok) {
+        // 🥳 TRIGGER CELEBRATION
+        triggerConfetti();
+        playSuccessSound();
+
         alert("Logged! 💪");
         setLog({
           workoutName: "",
@@ -77,7 +99,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 3. SAVE AS TEMPLATE (Routine) 👈 NEW
+  // 3. SAVE AS TEMPLATE
   const handleSaveTemplate = async () => {
     if (!log.workoutName)
       return alert("Pehle Routine ka naam toh likh! (Session Name)");
@@ -99,40 +121,69 @@ export default function WorkoutLog({ apiBase, userId }) {
       });
       if (res.ok) {
         alert("Routine Saved! 💾");
-        fetchData(); // Refresh dropdown
+        fetchData();
       }
     } catch (err) {
       alert("Save failed");
     }
   };
 
-  // 4. LOAD TEMPLATE 👈 NEW
+  // 4. LOAD TEMPLATE
   const handleLoadTemplate = (templateId) => {
     if (!templateId) return;
-
     const selected = templates.find((t) => t._id === templateId);
     if (selected) {
-      // Template data load karo, lekin sets khali rakho taaki user aaj ka weight daale
       setLog({
         workoutName: selected.name,
         exercises: selected.exercises.map((ex) => ({
           name: ex.name,
           targetMuscle: ex.targetMuscle,
-          sets: [{ reps: "", weight: "" }], // Clean slate for today
+          sets: [{ reps: "", weight: "" }],
         })),
       });
     }
   };
 
-  // 5. DELETE TEMPLATE
+  // 5. HANDLE REST DAY (With Confetti!)
+  const handleRestDay = async () => {
+    const confirmRest = confirm(
+      "Aaj pakka Rest Day hai? (Streak bach jayegi) 😴"
+    );
+    if (!confirmRest) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/workout/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          workoutName: "Active Recovery 😴",
+          exercises: [],
+        }),
+      });
+
+      if (res.ok) {
+        // 🥳 TRIGGER CELEBRATION FOR REST TOO (Recovery is important!)
+        triggerConfetti();
+        playSuccessSound();
+
+        alert("Rest Day Logged! Streak Saved. 🔥");
+        fetchData();
+      }
+    } catch (err) {
+      alert("Error logging rest day");
+    }
+    setLoading(false);
+  };
+
+  // HELPERS
   const handleDeleteTemplate = async (e, id) => {
     e.stopPropagation();
     if (!confirm("Ye Routine uda du?")) return;
     await fetch(`${apiBase}/api/template/${id}`, { method: "DELETE" });
     fetchData();
   };
-
-  // ... (Standard Helpers: delete, addSet, share etc. - Same as before)
   const handleDeleteWorkout = async (e, workoutId) => {
     e.stopPropagation();
     if (!confirm("Pura Workout uda du?")) return;
@@ -209,47 +260,13 @@ export default function WorkoutLog({ apiBase, userId }) {
     }, 200);
   };
 
-  // 👇 1. NEW FUNCTION: HANDLE REST DAY
-  const handleRestDay = async () => {
-    const confirmRest = confirm(
-      "Aaj pakka Rest Day hai? (Streak bach jayegi) 😴"
-    );
-    if (!confirmRest) return;
-
-    setLoading(true);
-    try {
-      // Hum ek Empty Workout bhejenge
-      const res = await fetch(`${apiBase}/api/workout/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          workoutName: "Active Recovery 😴", // Naam Rest Day
-          exercises: [], // Koi exercise nahi
-        }),
-      });
-
-      if (res.ok) {
-        alert("Rest Day Logged! Streak Saved. 🔥");
-        fetchHistory(); // History refresh
-      }
-    } catch (err) {
-      alert("Error logging rest day");
-    }
-    setLoading(false);
-  };
-
   return (
     <div>
       <PersonalRecords apiBase={apiBase} userId={userId} />
       <RestTimer />
-
       <PlateCalculator />
-
       <MuscleSplitChart history={history} />
-
       <ExerciseChart history={history} />
-
       <OneRepMax />
       <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
 
@@ -264,7 +281,7 @@ export default function WorkoutLog({ apiBase, userId }) {
           marginTop: "20px",
         }}
       >
-        {/* 🆕 TEMPLATE LOADER HEADER */}
+        {/* HEADER */}
         <div
           style={{
             display: "flex",
@@ -277,7 +294,7 @@ export default function WorkoutLog({ apiBase, userId }) {
             gap: "10px",
           }}
         >
-          {/* Left Side: Title + Streak */}
+          {/* Title + Streak */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
               LOG SESSION
@@ -285,13 +302,12 @@ export default function WorkoutLog({ apiBase, userId }) {
             <StreakFire history={history} />
           </div>
 
-          {/* 👇 2. NEW BUTTONS SECTION (Rest Day + Load) */}
+          {/* Buttons: Rest + Load */}
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            {/* REST BUTTON */}
             <button
               type="button"
               onClick={handleRestDay}
-              title="Log Rest Day to keep Streak alive"
+              title="Log Rest Day"
               style={{
                 background: "none",
                 border: "1px solid #444",
@@ -305,7 +321,6 @@ export default function WorkoutLog({ apiBase, userId }) {
               😴 Rest
             </button>
 
-            {/* DROPDOWN */}
             <select
               onChange={(e) => handleLoadTemplate(e.target.value)}
               style={{
@@ -436,7 +451,6 @@ export default function WorkoutLog({ apiBase, userId }) {
           >
             + ADD EXERCISE
           </button>
-          {/* 🆕 SAVE TEMPLATE BUTTON */}
           <button
             type="button"
             onClick={handleSaveTemplate}
@@ -463,9 +477,8 @@ export default function WorkoutLog({ apiBase, userId }) {
         </button>
       </form>
 
-      {/* HISTORY (With Manage Templates Section? Optional but let's keep it simple for now) */}
+      {/* HISTORY & TEMPLATES LIST */}
       <div style={{ marginTop: "20px" }}>
-        {/* Simple Template List to Delete */}
         {templates.length > 0 && (
           <div
             style={{
