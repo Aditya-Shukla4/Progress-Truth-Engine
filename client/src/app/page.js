@@ -5,6 +5,7 @@ import CheckIn from "../components/CheckIn";
 import WorkoutLog from "../components/WorkoutLog";
 import Profile from "../components/Profile"; // 👈 NEW IMPORT
 import { motion, AnimatePresence } from "framer-motion";
+import Leaderboard from "../components/Leaderboard";
 
 export default function Home() {
   const API_BASE = "https://progresstruth-api.onrender.com";
@@ -148,6 +149,19 @@ export default function Home() {
               />
             </motion.div>
           )}
+
+          {/* TAB 4: LEADERBOARD 🏆 */}
+          {activeTab === "leaderboard" && (
+            <motion.div
+              key="leaderboard"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Leaderboard apiBase={API_BASE} />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -203,6 +217,19 @@ export default function Home() {
           }}
         >
           👤
+        </button>
+
+        <button
+          onClick={() => setActiveTab("leaderboard")}
+          style={{
+            background: "none",
+            border: "none",
+            color: activeTab === "leaderboard" ? "#ef4444" : "#666",
+            fontSize: "1.5rem",
+            cursor: "pointer",
+          }}
+        >
+          🏆
         </button>
       </div>
     </div>

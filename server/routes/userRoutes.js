@@ -2,10 +2,12 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const Workout = require("../models/Workout");
 
 // ==========================================
-// 1️⃣ MANUAL REGISTER (Email + Password)
+// 1️⃣ AUTH ROUTES (Login/Register)
 // ==========================================
+
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, height, targetWeight, dietType } = req.body;
@@ -19,7 +21,7 @@ router.post("/register", async (req, res) => {
     user = new User({
       username: name,
       email,
-      password: hashedPassword, // 🔐 Password Save hoga
+      password: hashedPassword,
       height: height || 0,
       targetWeight: targetWeight || 0,
       dietType: dietType || "Non-Veg",
@@ -33,9 +35,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// ==========================================
-// 2️⃣ MANUAL LOGIN (Email + Password)
-// ==========================================
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -43,8 +42,6 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "Invalid Credentials" });
 
-    // 🛑 Password Check Zaroori Hai
-    // Agar user Google se bana tha, toh uska password empty hoga, isliye ye fail hoga (Sahi hai)
     if (!user.password)
       return res.status(400).json({ error: "Please use Google Login" });
 
@@ -62,9 +59,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ==========================================
-// 3️⃣ GOOGLE LOGIN (No Password) 🆕
-// ==========================================
 router.post("/google", async (req, res) => {
   try {
     const { email, name } = req.body;
@@ -72,18 +66,16 @@ router.post("/google", async (req, res) => {
     let user = await User.findOne({ email });
 
     if (user) {
-      // A. USER HAI -> Login karwa do (Password check mat karo)
       return res.json({
         message: "Google Login Success",
         userId: user._id,
         name: user.username,
       });
     } else {
-      // B. USER NAHI HAI -> Naya banao (Password Empty rakho)
       user = new User({
         username: name,
         email: email,
-        password: "", // 👈 Password Khali
+        password: "",
         height: 0,
         targetWeight: 0,
         dietType: "Non-Veg",
@@ -102,8 +94,67 @@ router.post("/google", async (req, res) => {
 });
 
 // ==========================================
-// 4️⃣ PROFILE ROUTES (Common for All)
+// 2️⃣ SPECIFIC ROUTES (Ye Upar Hone Chahiye!) 🚨
 // ==========================================
+
+// 🏆 LEADERBOARD
+router.get("/leaderboard/global", async (req, res) => {
+  try {
+    const topUsers = await User.find()
+      .sort({ totalVolume: -1 })
+      .limit(10)
+      .select("username totalVolume dietType");
+
+    res.json(topUsers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Leaderboard error" });
+  }
+});
+
+// 🔧 FIX SCORES
+router.get("/fix-scores", async (req, res) => {
+  try {
+    const users = await User.find();
+    let updates = 0;
+
+    console.log(`Found ${users.length} users. Starting fix...`);
+
+    for (const user of users) {
+      const workouts = await Workout.find({ userId: user._id });
+      let totalVol = 0;
+
+      workouts.forEach((w) => {
+        if (w.exercises) {
+          w.exercises.forEach((ex) => {
+            if (ex.sets) {
+              ex.sets.forEach((s) => {
+                totalVol += (Number(s.weight) || 0) * (Number(s.reps) || 0);
+              });
+            }
+          });
+        }
+      });
+
+      // 👇 CHANGE: save() ki jagah update use kiya (Validation Ignore karega)
+      await User.findByIdAndUpdate(user._id, { totalVolume: totalVol });
+
+      console.log(`User: ${user.username} | Volume: ${totalVol}`);
+      updates++;
+    }
+
+    res.json({ message: `Scores Recalculated for ${updates} users! 🚀` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Fix failed" });
+  }
+});
+
+// ==========================================
+// 3️⃣ DYNAMIC ROUTES (Ye Sabse Neeche!)
+// ==========================================
+
+// GET USER (Profile)
 router.get("/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -114,6 +165,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// UPDATE USER
 router.put("/:id", async (req, res) => {
   try {
     const { height, targetWeight, dietType } = req.body;

@@ -28,7 +28,7 @@ const UserSchema = new mongoose.Schema({
   // Extra Fields
   lactoseIntolerant: { type: Boolean, default: false },
   hostelOrHome: { type: String, default: "home" },
-
+  totalVolume: { type: Number, default: 0 },
   createdAt: {
     type: Date,
     default: Date.now,
