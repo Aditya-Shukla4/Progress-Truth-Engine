@@ -22,8 +22,10 @@ export default function CheckIn({ apiBase, userId }) {
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/api/checkin/history/${userId}`);
-      const data = await res.json();
-      setHistory(data);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data);
+      }
     } catch (err) {
       console.error("History fetch failed");
     }
@@ -33,39 +35,88 @@ export default function CheckIn({ apiBase, userId }) {
     fetchHistory();
   }, [fetchHistory]);
 
+  // 🧠 THE TRUTH LOGIC (Client Side Brutality)
+  const getBrutalFeedback = (data) => {
+    const sleep = parseFloat(data.avgSleep);
+    const protein = parseFloat(data.dailyProtein);
+    const weight = parseFloat(data.currentWeight);
+    const days = parseFloat(data.workoutDays);
+
+    if (days < 3)
+      return {
+        msg: "❌ Part-time effort gets part-time results.",
+        color: "#ef4444",
+        status: "RED",
+      };
+    if (sleep < 6)
+      return {
+        msg: "🧟 You are sleeping like a zombie. Recovery failed.",
+        color: "#ef4444",
+        status: "RED",
+      };
+    if (protein < weight * 1.5)
+      return {
+        msg: "🐥 Not enough fuel. You are wasting reps.",
+        color: "#facc15",
+        status: "YELLOW",
+      };
+    if (data.strengthTrend === "decreasing")
+      return {
+        msg: "📉 Strength is dropping. Eat more or sleep more.",
+        color: "#facc15",
+        status: "YELLOW",
+      };
+
+    return {
+      msg: "🦍 Solid week. You represent the 1%.",
+      color: "#22c55e",
+      status: "GREEN",
+    };
+  };
+
   // SUBMIT HANDLER
   const handleCheckInSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResult(null);
 
-    // Fake delay for "Processing" feel
+    // 1. Calculate Brutal Feedback Locally (Instant)
+    const feedback = getBrutalFeedback(checkInForm);
+
     setTimeout(async () => {
       try {
         const payload = { ...checkInForm, userId: userId };
-        const res = await fetch(`${apiBase}/api/checkin/analyze`, {
+
+        // 2. Save to Backend (Quietly)
+        await fetch(`${apiBase}/api/checkin/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await res.json();
-        setResult(data);
+
+        // 3. Show Result
+        setResult(feedback);
         fetchHistory();
       } catch (err) {
         alert("Engine Failed!");
       }
       setLoading(false);
-    }, 1500);
+    }, 1000);
   };
 
   return (
     <div style={{ paddingBottom: "100px" }}>
-      {/* 📊 GRAPH SECTION (Glass Card) */}
+      {/* 📊 GRAPH SECTION */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card"
-        style={{ padding: "20px", marginBottom: "20px" }}
+        style={{
+          padding: "20px",
+          marginBottom: "20px",
+          background: "#111",
+          borderRadius: "10px",
+          border: "1px solid #333",
+        }}
       >
         <h3
           style={{
@@ -73,6 +124,7 @@ export default function CheckIn({ apiBase, userId }) {
             fontSize: "0.8rem",
             marginBottom: "10px",
             letterSpacing: "1px",
+            margin: 0,
           }}
         >
           LIVE METRICS
@@ -80,46 +132,31 @@ export default function CheckIn({ apiBase, userId }) {
         <ProgressChart data={history} />
       </motion.div>
 
-      {/* 📝 RESULT DISPLAY (Popup Animation) */}
+      {/* 📝 RESULT DISPLAY (THE TRUTH CARD) */}
       <AnimatePresence>
         {result && (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="glass-card"
             style={{
-              padding: "25px",
+              padding: "30px",
               marginBottom: "30px",
               textAlign: "center",
-              border: `1px solid ${
-                result.status === "RED"
-                  ? "#ef4444"
-                  : result.status === "YELLOW"
-                  ? "#facc15"
-                  : "#22c55e"
-              }`,
-              boxShadow: `0 0 30px ${
-                result.status === "RED"
-                  ? "rgba(239,68,68,0.3)"
-                  : result.status === "YELLOW"
-                  ? "rgba(250,204,21,0.3)"
-                  : "rgba(34,197,94,0.3)"
-              }`,
+              background: "#000",
+              border: `2px solid ${result.color}`,
+              borderRadius: "10px",
+              boxShadow: `0 0 50px ${result.color}40`, // Glow effect
             }}
           >
             <h2
               style={{
-                fontSize: "3rem",
+                fontSize: "4rem",
                 fontWeight: "900",
                 margin: 0,
-                color:
-                  result.status === "RED"
-                    ? "#ef4444"
-                    : result.status === "YELLOW"
-                    ? "#facc15"
-                    : "#22c55e",
-                textShadow: "0 0 10px currentColor",
+                lineHeight: 1,
+                color: result.color,
+                textShadow: `0 0 20px ${result.color}`,
               }}
             >
               {result.status}
@@ -127,47 +164,30 @@ export default function CheckIn({ apiBase, userId }) {
 
             <p
               style={{
-                fontSize: "1.2rem",
+                fontSize: "1.5rem",
                 fontWeight: "bold",
-                margin: "10px 0",
+                margin: "20px 0",
                 color: "white",
+                fontStyle: "italic",
               }}
             >
-              {result.resultMessage}
+              "{result.msg}"
             </p>
-
-            <div
-              style={{
-                background: "rgba(0,0,0,0.5)",
-                padding: "15px",
-                borderRadius: "10px",
-                marginTop: "15px",
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "0.7rem",
-                  color: "#888",
-                  textTransform: "uppercase",
-                }}
-              >
-                Mission Objective:
-              </span>
-              <span style={{ color: "#ddd" }}>{result.actionStep}</span>
-            </div>
 
             <button
               onClick={() => setResult(null)}
-              className="neon-btn"
               style={{
-                background: "#333",
-                marginTop: "20px",
-                boxShadow: "none",
-                border: "1px solid #555",
+                background: "#222",
+                color: "white",
+                border: "1px solid #444",
+                padding: "10px 20px",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                marginTop: "10px",
               }}
             >
-              CLOSE REPORT
+              ACCEPT REALITY
             </button>
           </motion.div>
         )}
@@ -179,12 +199,14 @@ export default function CheckIn({ apiBase, userId }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onSubmit={handleCheckInSubmit}
-          className="glass-card"
           style={{
             display: "flex",
             flexDirection: "column",
             gap: "15px",
-            padding: "25px",
+            padding: "20px",
+            background: "#111",
+            borderRadius: "10px",
+            border: "1px solid #333",
           }}
         >
           <h3
@@ -207,54 +229,42 @@ export default function CheckIn({ apiBase, userId }) {
             onChange={(e) =>
               setCheckInForm({ ...checkInForm, currentWeight: e.target.value })
             }
-            className="cyber-input"
+            style={inputStyle}
           />
 
           <div style={{ display: "flex", gap: "10px" }}>
             <input
               name="avgSleep"
-              placeholder="Sleep (hrs)"
+              placeholder="Avg Sleep (hrs)"
               type="number"
               required
               onChange={(e) =>
                 setCheckInForm({ ...checkInForm, avgSleep: e.target.value })
               }
-              className="cyber-input"
+              style={inputStyle}
             />
             <input
               name="dailyProtein"
-              placeholder="Protein (g)"
+              placeholder="Daily Protein (g)"
               type="number"
               required
               onChange={(e) =>
                 setCheckInForm({ ...checkInForm, dailyProtein: e.target.value })
               }
-              className="cyber-input"
+              style={inputStyle}
             />
           </div>
-
-          <select
-            name="caloriesLevel"
-            onChange={(e) =>
-              setCheckInForm({ ...checkInForm, caloriesLevel: e.target.value })
-            }
-            className="cyber-input"
-          >
-            <option value="maintenance">Maintenance Calories</option>
-            <option value="deficit">Deficit (Cutting)</option>
-            <option value="surplus">Surplus (Bulking)</option>
-          </select>
 
           <div style={{ display: "flex", gap: "10px" }}>
             <input
               name="workoutDays"
-              placeholder="Days/Week"
+              placeholder="Gym Days/Week"
               type="number"
               required
               onChange={(e) =>
                 setCheckInForm({ ...checkInForm, workoutDays: e.target.value })
               }
-              className="cyber-input"
+              style={inputStyle}
             />
             <select
               name="strengthTrend"
@@ -264,16 +274,16 @@ export default function CheckIn({ apiBase, userId }) {
                   strengthTrend: e.target.value,
                 })
               }
-              className="cyber-input"
+              style={inputStyle}
             >
-              <option value="same">Strength: Same ➖</option>
+              <option value="same">Strength: Flat ➖</option>
               <option value="increasing">Strength: Up ⬆️</option>
               <option value="decreasing">Strength: Down ⬇️</option>
             </select>
           </div>
 
-          <button type="submit" disabled={loading} className="neon-btn">
-            {loading ? "ANALYZING..." : "INITIATE SCAN"}
+          <button type="submit" disabled={loading} style={btnStyle}>
+            {loading ? "ANALYZING..." : "GET TRUTH"}
           </button>
         </motion.form>
       )}
@@ -296,11 +306,12 @@ export default function CheckIn({ apiBase, userId }) {
             <motion.div
               whileHover={{ scale: 1.02 }}
               key={record._id}
-              className="glass-card"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 padding: "15px",
+                background: "#111",
+                borderRadius: "5px",
                 borderLeft: `4px solid ${
                   record.status === "RED"
                     ? "#ef4444"
@@ -345,3 +356,27 @@ export default function CheckIn({ apiBase, userId }) {
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "15px",
+  background: "#222",
+  border: "1px solid #444",
+  color: "white",
+  borderRadius: "5px",
+  outline: "none",
+  fontWeight: "bold",
+};
+
+const btnStyle = {
+  width: "100%",
+  padding: "15px",
+  background: "white",
+  color: "black",
+  border: "none",
+  borderRadius: "5px",
+  fontWeight: "900",
+  cursor: "pointer",
+  fontSize: "1rem",
+  marginTop: "10px",
+};

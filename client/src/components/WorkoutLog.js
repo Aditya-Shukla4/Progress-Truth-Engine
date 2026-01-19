@@ -132,18 +132,21 @@ export default function WorkoutLog({ apiBase, userId }) {
   const handleLoadTemplate = (templateId) => {
     if (!templateId) return;
     const selected = templates.find((t) => t._id === templateId);
+
     if (selected) {
       setLog({
         workoutName: selected.name,
         exercises: selected.exercises.map((ex) => ({
           name: ex.name,
           targetMuscle: ex.targetMuscle,
-          sets: [{ reps: "", weight: "" }],
+          sets: ex.sets.map((s) => ({
+            reps: s.reps || "10",
+            weight: s.weight || "0",
+          })),
         })),
       });
     }
   };
-
   // 5. HANDLE REST DAY (With Confetti!)
   const handleRestDay = async () => {
     const confirmRest = confirm(

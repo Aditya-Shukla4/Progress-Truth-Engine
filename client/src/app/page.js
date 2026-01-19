@@ -3,24 +3,23 @@ import { useState, useEffect } from "react";
 import Onboarding from "../components/Onboarding";
 import CheckIn from "../components/CheckIn";
 import WorkoutLog from "../components/WorkoutLog";
-import Profile from "../components/Profile"; // 👈 NEW IMPORT
+import Profile from "../components/Profile";
 import { motion, AnimatePresence } from "framer-motion";
-import Leaderboard from "../components/Leaderboard";
+// import Leaderboard from "../components/Leaderboard"; // 👈 PHASE 1: HIDDEN
 
 export default function Home() {
   const API_BASE = "https://progresstruth-api.onrender.com";
   // const API_BASE = "http://localhost:5000";
 
   const [userId, setUserId] = useState(null);
-  const [userName, setUserName] = useState("U"); // Avatar ke liye
-  const [activeTab, setActiveTab] = useState("workout"); // Default Workout rakha hai
+  const [userName, setUserName] = useState("U");
+  const [activeTab, setActiveTab] = useState("workout");
 
   // 1. LOAD USER & FETCH NAME
   useEffect(() => {
     const savedId = localStorage.getItem("pte_userId");
     if (savedId) {
       setUserId(savedId);
-      // Avatar ke liye Name fetch kar rahe hain
       fetch(`${API_BASE}/api/user/${savedId}`)
         .then((res) => res.json())
         .then((data) => setUserName(data.name || "U"))
@@ -31,7 +30,7 @@ export default function Home() {
   const handleLogin = (id) => {
     localStorage.setItem("pte_userId", id);
     setUserId(id);
-    window.location.reload(); // Refresh taaki name fetch ho jaye
+    window.location.reload();
   };
 
   const handleLogout = () => {
@@ -40,7 +39,6 @@ export default function Home() {
     setActiveTab("workout");
   };
 
-  // Agar login nahi hai, toh Onboarding dikhao
   if (!userId) {
     return <Onboarding apiBase={API_BASE} onLogin={handleLogin} />;
   }
@@ -83,7 +81,7 @@ export default function Home() {
           <span style={{ color: "#ef4444" }}>PROGRESS</span> TRUTH
         </h1>
 
-        {/* 👤 AVATAR (Click to go Profile) */}
+        {/* 👤 AVATAR */}
         <div
           onClick={() => setActiveTab("profile")}
           style={{
@@ -104,7 +102,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 🎬 MAIN CONTENT (With Slide Animations) */}
+      {/* 🎬 MAIN CONTENT */}
       <div style={{ padding: "10px" }}>
         <AnimatePresence mode="wait">
           {/* TAB 1: WORKOUT */}
@@ -150,8 +148,8 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* TAB 4: LEADERBOARD 🏆 */}
-          {activeTab === "leaderboard" && (
+          {/* 👇 PHASE 1: LEADERBOARD HIDDEN (Commented Out) */}
+          {/* {activeTab === "leaderboard" && (
             <motion.div
               key="leaderboard"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -161,11 +159,11 @@ export default function Home() {
             >
               <Leaderboard apiBase={API_BASE} />
             </motion.div>
-          )}
+          )} */}
         </AnimatePresence>
       </div>
 
-      {/* 👇 BOTTOM NAVIGATION BAR (Fixed) */}
+      {/* 👇 BOTTOM NAVIGATION BAR */}
       <div
         style={{
           position: "fixed",
@@ -206,6 +204,20 @@ export default function Home() {
           ⚖️
         </button>
 
+        {/* 👇 PHASE 1: TROPHY BUTTON HIDDEN */}
+        {/* <button
+          onClick={() => setActiveTab("leaderboard")}
+          style={{
+            background: "none",
+            border: "none",
+            color: activeTab === "leaderboard" ? "#ef4444" : "#666",
+            fontSize: "1.5rem",
+            cursor: "pointer",
+          }}
+        >
+          🏆
+        </button> */}
+
         <button
           onClick={() => setActiveTab("profile")}
           style={{
@@ -217,19 +229,6 @@ export default function Home() {
           }}
         >
           👤
-        </button>
-
-        <button
-          onClick={() => setActiveTab("leaderboard")}
-          style={{
-            background: "none",
-            border: "none",
-            color: activeTab === "leaderboard" ? "#ef4444" : "#666",
-            fontSize: "1.5rem",
-            cursor: "pointer",
-          }}
-        >
-          🏆
         </button>
       </div>
     </div>
