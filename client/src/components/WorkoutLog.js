@@ -10,13 +10,20 @@ import html2canvas from "html2canvas";
 import ExerciseChart from "./ExerciseChart";
 import StreakFire from "./StreakFire";
 import PlateCalculator from "./PlateCalculator";
-import confetti from "canvas-confetti"; // 👈 NEW: IMPORT CONFETTI
+import confetti from "canvas-confetti";
+import { EXERCISE_DB } from "../utils/exerciseDB"; // 👈 IMPORT MASTER LIST
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
+
+  // 🧠 SUGGESTIONS STATE (The Memory)
+  const [suggestions, setSuggestions] = useState({});
+
+  // 🔍 AUTO-COMPLETE STATE
+  const [nameSuggestions, setNameSuggestions] = useState({});
 
   // Share State
   const shareCardRef = useRef(null);
@@ -29,22 +36,22 @@ export default function WorkoutLog({ apiBase, userId }) {
     ],
   });
 
-  // 🔊 SOUND FUNCTION (The Ding!)
+  // 🔊 SOUND FUNCTION
   const playSuccessSound = () => {
     const audio = new Audio(
-      "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
-    ); // Google's free sound
+      "https://actions.google.com/sounds/v1/cartoon/pop.ogg",
+    );
     audio.volume = 0.5;
     audio.play().catch((e) => console.log("Audio play failed"));
   };
 
-  // 🎉 CONFETTI FUNCTION (The Party!)
+  // 🎉 CONFETTI FUNCTION
   const triggerConfetti = () => {
     confetti({
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ["#ef4444", "#ffffff", "#000000"], // Red, White, Black theme
+      colors: ["#ef4444", "#ffffff", "#000000"],
     });
   };
 
@@ -65,7 +72,36 @@ export default function WorkoutLog({ apiBase, userId }) {
     fetchData();
   }, [fetchData]);
 
-  // 2. SAVE LOGIC (Workout)
+  // 🧠 THE BRAIN: FETCH LAST LOG FOR GHOST TEXT
+  const fetchLastLog = async (exerciseName, index) => {
+    if (!exerciseName) return;
+
+    try {
+      const res = await fetch(
+        `${apiBase}/api/workout/last-log?userId=${userId}&exerciseName=${encodeURIComponent(
+          exerciseName,
+        )}`,
+      );
+      const data = await res.json();
+
+      if (data.found) {
+        setSuggestions((prev) => ({
+          ...prev,
+          [index]: data.sets,
+        }));
+      } else {
+        setSuggestions((prev) => {
+          const newState = { ...prev };
+          delete newState[index];
+          return newState;
+        });
+      }
+    } catch (err) {
+      console.error("Brain freeze 🥶", err);
+    }
+  };
+
+  // 2. SAVE LOGIC
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -76,10 +112,8 @@ export default function WorkoutLog({ apiBase, userId }) {
         body: JSON.stringify({ ...log, userId }),
       });
       if (res.ok) {
-        // 🥳 TRIGGER CELEBRATION
         triggerConfetti();
         playSuccessSound();
-
         alert("Logged! 💪");
         setLog({
           workoutName: "",
@@ -91,6 +125,7 @@ export default function WorkoutLog({ apiBase, userId }) {
             },
           ],
         });
+        setSuggestions({});
         fetchData();
       }
     } catch (err) {
@@ -104,10 +139,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     if (!log.workoutName)
       return alert("Pehle Routine ka naam toh likh! (Session Name)");
 
-    const confirmSave = confirm(
-      `Save "${log.workoutName}" as a permanent routine?`
-    );
-    if (!confirmSave) return;
+    if (!confirm(`Save "${log.workoutName}" as a permanent routine?`)) return;
 
     try {
       const res = await fetch(`${apiBase}/api/template/create`, {
@@ -145,15 +177,17 @@ export default function WorkoutLog({ apiBase, userId }) {
           })),
         })),
       });
+
+      // Load karte hi sabka history fetch kar lo
+      selected.exercises.forEach((ex, i) => {
+        fetchLastLog(ex.name, i);
+      });
     }
   };
-  // 5. HANDLE REST DAY (With Confetti!)
-  const handleRestDay = async () => {
-    const confirmRest = confirm(
-      "Aaj pakka Rest Day hai? (Streak bach jayegi) 😴"
-    );
-    if (!confirmRest) return;
 
+  // 5. HANDLE REST DAY
+  const handleRestDay = async () => {
+    if (!confirm("Aaj pakka Rest Day hai? (Streak bach jayegi) 😴")) return;
     setLoading(true);
     try {
       const res = await fetch(`${apiBase}/api/workout/add`, {
@@ -165,12 +199,9 @@ export default function WorkoutLog({ apiBase, userId }) {
           exercises: [],
         }),
       });
-
       if (res.ok) {
-        // 🥳 TRIGGER CELEBRATION FOR REST TOO (Recovery is important!)
         triggerConfetti();
         playSuccessSound();
-
         alert("Rest Day Logged! Streak Saved. 🔥");
         fetchData();
       }
@@ -201,6 +232,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     });
     fetchData();
   };
+
   const addExercise = () =>
     setLog({
       ...log,
@@ -297,7 +329,6 @@ export default function WorkoutLog({ apiBase, userId }) {
             gap: "10px",
           }}
         >
-          {/* Title + Streak */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
               LOG SESSION
@@ -305,7 +336,6 @@ export default function WorkoutLog({ apiBase, userId }) {
             <StreakFire history={history} />
           </div>
 
-          {/* Buttons: Rest + Load */}
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <button
               type="button"
@@ -377,13 +407,99 @@ export default function WorkoutLog({ apiBase, userId }) {
               EXERCISE {i + 1}
             </div>
             <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-              <input
-                placeholder="Exercise Name"
-                required
-                value={ex.name}
-                onChange={(e) => updateEx(i, "name", e.target.value)}
-                style={{ ...inputStyle, flex: 2 }}
-              />
+              {/* 👇 SMART INPUT CONTAINER */}
+              <div style={{ position: "relative", flex: 2 }}>
+                <input
+                  placeholder="Exercise Name"
+                  required
+                  value={ex.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateEx(i, "name", val);
+
+                    // 🔍 FILTER LOGIC (Updated for Objects)
+                    if (val.length > 0) {
+                      const matches = EXERCISE_DB.filter(
+                        (item) =>
+                          item.name.toLowerCase().includes(val.toLowerCase()), // Object.name check karo
+                      ).slice(0, 5);
+                      setNameSuggestions((prev) => ({ ...prev, [i]: matches }));
+                    } else {
+                      setNameSuggestions((prev) => ({ ...prev, [i]: [] }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(
+                      () =>
+                        setNameSuggestions((prev) => ({ ...prev, [i]: [] })),
+                      200,
+                    );
+                    fetchLastLog(ex.name, i);
+                  }}
+                  style={{ ...inputStyle, width: "100%" }}
+                />
+
+                {/* 👇 THE DROPDOWN LIST */}
+                {nameSuggestions[i] && nameSuggestions[i].length > 0 && (
+                  <ul
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      width: "100%",
+                      background: "#222",
+                      border: "1px solid #444",
+                      listStyle: "none",
+                      padding: 0,
+                      margin: 0,
+                      zIndex: 10,
+                      maxHeight: "150px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {nameSuggestions[i].map((suggestion, idx) => (
+                      <li
+                        key={idx}
+                        onClick={() => {
+                          // ⚡ MAGIC HAPPENS HERE
+                          updateEx(i, "name", suggestion.name); // 1. Name Set karo
+                          updateEx(i, "targetMuscle", suggestion.muscle); // 2. Muscle Auto-Select karo!
+
+                          setNameSuggestions((prev) => ({ ...prev, [i]: [] })); // List band
+                          fetchLastLog(suggestion.name, i); // History fetch
+                        }}
+                        style={{
+                          padding: "10px",
+                          borderBottom: "1px solid #333",
+                          cursor: "pointer",
+                          color: "#ccc",
+                          fontSize: "0.9rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.target.style.background = "#333")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.target.style.background = "#222")
+                        }
+                      >
+                        <span>{suggestion.name}</span>
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#666",
+                            marginTop: "2px",
+                          }}
+                        >
+                          {suggestion.muscle}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <select
                 value={ex.targetMuscle}
                 onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
@@ -400,26 +516,49 @@ export default function WorkoutLog({ apiBase, userId }) {
               </select>
             </div>
             {ex.sets.map((s, j) => (
-              <div
-                key={j}
-                style={{ display: "flex", gap: "10px", marginBottom: "5px" }}
-              >
-                <input
-                  placeholder="kg"
-                  type="number"
-                  required
-                  value={s.weight}
-                  onChange={(e) => updateSet(i, j, "weight", e.target.value)}
-                  style={{ ...inputStyle, flex: 1 }}
-                />
-                <input
-                  placeholder="reps"
-                  type="number"
-                  required
-                  value={s.reps}
-                  onChange={(e) => updateSet(i, j, "reps", e.target.value)}
-                  style={{ ...inputStyle, flex: 1 }}
-                />
+              <div key={j} style={{ marginBottom: "10px" }}>
+                <div
+                  style={{ display: "flex", gap: "10px", marginBottom: "2px" }}
+                >
+                  <input
+                    placeholder="kg"
+                    type="number"
+                    required
+                    value={s.weight}
+                    onChange={(e) => updateSet(i, j, "weight", e.target.value)}
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <input
+                    placeholder="reps"
+                    type="number"
+                    required
+                    value={s.reps}
+                    onChange={(e) => updateSet(i, j, "reps", e.target.value)}
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                </div>
+
+                {/* 👻 GHOST TEXT: THE SUGGESTION */}
+                {suggestions[i] && suggestions[i][j] && (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#666",
+                      fontStyle: "italic",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "0 5px",
+                    }}
+                  >
+                    <span>
+                      Last: {suggestions[i][j].lastWeight}kg ×{" "}
+                      {suggestions[i][j].lastReps}
+                    </span>
+                    <span style={{ color: "#facc15", fontWeight: "bold" }}>
+                      {suggestions[i][j].suggestion}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
             <button

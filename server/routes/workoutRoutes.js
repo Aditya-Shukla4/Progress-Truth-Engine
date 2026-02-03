@@ -39,7 +39,7 @@ router.post("/add", async (req, res) => {
 
     res.json(savedWorkout);
     console.log(
-      `💪 Workout Logged: ${workoutName} | Score Added: ${sessionVolume}`
+      `💪 Workout Logged: ${workoutName} | Score Added: ${sessionVolume}`,
     );
   } catch (err) {
     console.error(err);
@@ -82,6 +82,62 @@ router.get("/prs/:userId", async (req, res) => {
   }
 });
 
+// 🧠 SMART LOGIC: GET LAST PERFORMANCE OF AN EXERCISE
+router.get("/last-log", async (req, res) => {
+  try {
+    const { userId, exerciseName } = req.query;
+
+    // 1. Database me dhundo: Is user ka wo workout jisme ye exercise thi
+    // Sort by Date Descending (Sabse naya pehle)
+    const lastWorkout = await Workout.findOne({
+      userId,
+      "exercises.name": { $regex: new RegExp(`^${exerciseName}$`, "i") }, // Case insensitive search
+    }).sort({ date: -1 });
+
+    if (!lastWorkout) {
+      return res.json({ found: false, message: "New Exercise" });
+    }
+
+    // 2. Workout mil gaya, ab usme se exact exercise nikalo
+    const exerciseData = lastWorkout.exercises.find(
+      (ex) => ex.name.toLowerCase() === exerciseName.toLowerCase(),
+    );
+
+    // 3. Simple Overload Logic (Backend Brain) 🧠
+    // Agar pichli baar user ne achha kiya tha, toh thoda push karo
+    const suggestedSets = exerciseData.sets.map((s) => {
+      const lastReps = Number(s.reps) || 0;
+      const lastWeight = Number(s.weight) || 0;
+
+      let suggestion = "";
+
+      // LOGIC: PROGRESSIVE OVERLOAD
+      if (lastReps >= 12) {
+        suggestion = "Try heavy weight? ⬆️";
+      } else if (lastReps < 8) {
+        suggestion = `Aim for ${lastReps + 1}-${lastReps + 2} reps 🎯`;
+      } else {
+        suggestion = "Match last week 🛡️";
+      }
+
+      return {
+        lastWeight,
+        lastReps,
+        suggestion,
+      };
+    });
+
+    res.json({
+      found: true,
+      date: lastWorkout.date,
+      sets: suggestedSets,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Memory Loss" });
+  }
+});
+
 // 4. DELETE WORKOUT
 router.delete("/:id", async (req, res) => {
   try {
@@ -102,7 +158,7 @@ router.delete("/:workoutId/exercise/:exerciseId", async (req, res) => {
     const updatedWorkout = await Workout.findByIdAndUpdate(
       workoutId,
       { $pull: { exercises: { _id: exerciseId } } },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedWorkout)
