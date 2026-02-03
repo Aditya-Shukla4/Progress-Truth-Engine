@@ -380,13 +380,79 @@ export default function WorkoutLog({ apiBase, userId }) {
           </div>
         </div>
 
-        <input
-          placeholder="Session Name (e.g. Push Day)"
-          required
-          value={log.workoutName}
-          onChange={(e) => setLog({ ...log, workoutName: e.target.value })}
-          style={{ ...inputStyle, fontWeight: "bold" }}
-        />
+        {/* 👇 SESSION NAME SECTION WITH SMART CHIPS */}
+        <div style={{ marginBottom: "15px" }}>
+          {/* 1. INPUT FIELD */}
+          <input
+            placeholder="Session Name (e.g. Push Day)"
+            required
+            value={log.workoutName}
+            onChange={(e) => setLog({ ...log, workoutName: e.target.value })}
+            style={{ ...inputStyle, fontWeight: "bold", marginBottom: "8px" }}
+          />
+
+          {/* 2. SMART CHIPS (PRE-DEFINED + HISTORY) */}
+          {(() => {
+            // A. Standard Gym Bros Splits 🏋️‍♂️
+            const defaultSplits = [
+              "Push Day",
+              "Pull Day",
+              "Leg Day",
+              "Upper Body",
+              "Lower Body",
+              "Chest Day",
+              "Back Day",
+              "Arms",
+              "Shoulders",
+            ];
+
+            // B. Tera History (Unique names only)
+            const historyNames = [
+              ...new Set(history.map((w) => w.workoutName)),
+            ];
+
+            // C. Merge (History Pehle + Phir Defaults) & Remove Duplicates
+            const allSuggestions = [
+              ...new Set([...historyNames, ...defaultSplits]),
+            ].slice(0, 10);
+
+            return (
+              <div
+                className="hide-scrollbar"
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  overflowX: "auto",
+                  whiteSpace: "nowrap",
+                  paddingBottom: "5px",
+                }}
+              >
+                {allSuggestions.map((name, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setLog({ ...log, workoutName: name })}
+                    style={{
+                      background: log.workoutName === name ? "#ef4444" : "#222", // Active color Red
+                      color: log.workoutName === name ? "white" : "#ccc",
+                      border:
+                        log.workoutName === name
+                          ? "1px solid #ef4444"
+                          : "1px solid #444",
+                      padding: "6px 12px",
+                      borderRadius: "20px", // Pill Shape
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
 
         {log.exercises.map((ex, i) => (
           <div
