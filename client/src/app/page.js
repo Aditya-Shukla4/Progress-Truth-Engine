@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StreakCelebration, PageTransition } from "../components/animations";
 
 export default function Home() {
-  const API_BASE = "https://progresstruth-api.onrender.com";
+  const API_BASE = "https://progress-truth-engine.onrender.com";
   // const API_BASE = "http://localhost:5000";
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState("U");
