@@ -8,103 +8,131 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,
 } from "recharts";
 import { motion } from "framer-motion";
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: "var(--surface-2)",
+        border: "1px solid var(--ember-border)",
+        borderRadius: "var(--radius-md)",
+        padding: "10px 14px",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+      }}
+    >
+      <p
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.62rem",
+          color: "var(--text-3)",
+          marginBottom: "4px",
+          letterSpacing: "0.1em",
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 900,
+          fontSize: "1.3rem",
+          color: "var(--ember)",
+          lineHeight: 1,
+        }}
+      >
+        {payload[0].value}{" "}
+        <span
+          style={{
+            fontSize: "0.7rem",
+            fontFamily: "var(--font-mono)",
+            fontWeight: 400,
+          }}
+        >
+          kg
+        </span>
+      </p>
+    </div>
+  );
+};
 
 export default function ExerciseChart({ history }) {
   const [selectedExercise, setSelectedExercise] = useState("");
 
-  // 1. Unique Exercises nikalo
   const exerciseList = useMemo(() => {
     const names = new Set();
-    history.forEach((w) => {
-      w.exercises.forEach((ex) => names.add(ex.name));
-    });
+    history.forEach((w) => w.exercises.forEach((ex) => names.add(ex.name)));
     return Array.from(names).sort();
   }, [history]);
 
-  // 2. Data Prepare karo (Sirf Selected Exercise ka Max Weight)
   const chartData = useMemo(() => {
     if (!selectedExercise) return [];
-
-    const data = [];
-    // Oldest to Newest sort karo
-    const sortedHistory = [...history].sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
+    const sorted = [...history].sort(
+      (a, b) => new Date(a.date) - new Date(b.date),
     );
-
-    sortedHistory.forEach((workout) => {
-      const exercise = workout.exercises.find(
-        (ex) => ex.name === selectedExercise
-      );
-      if (exercise) {
-        // Us din ka sabse bhaari set nikalo
+    return sorted.reduce((acc, workout) => {
+      const ex = workout.exercises.find((e) => e.name === selectedExercise);
+      if (ex) {
         const maxWeight = Math.max(
-          ...exercise.sets.map((s) => Number(s.weight) || 0)
+          ...ex.sets.map((s) => Number(s.weight) || 0),
         );
-
-        if (maxWeight > 0) {
-          data.push({
+        if (maxWeight > 0)
+          acc.push({
             date: new Date(workout.date).toLocaleDateString(undefined, {
               month: "short",
               day: "numeric",
             }),
             weight: maxWeight,
-            fullDate: new Date(workout.date).toDateString(),
           });
-        }
       }
-    });
-    return data;
+      return acc;
+    }, []);
   }, [history, selectedExercise]);
 
-  // Auto-select first exercise
-  if (!selectedExercise && exerciseList.length > 0) {
+  if (!selectedExercise && exerciseList.length > 0)
     setSelectedExercise(exerciseList[0]);
-  }
-
   if (history.length === 0) return null;
+
+  const maxWeight = chartData.length
+    ? Math.max(...chartData.map((d) => d.weight))
+    : 0;
+  const minWeight = chartData.length
+    ? Math.min(...chartData.map((d) => d.weight))
+    : 0;
+  const gain =
+    chartData.length > 1
+      ? chartData[chartData.length - 1].weight - chartData[0].weight
+      : 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{
-        marginTop: "20px",
-        padding: "15px",
-        backgroundColor: "#111",
-        border: "1px solid #333",
-      }}
+      className="card"
+      style={{ marginTop: "12px" }}
     >
+      {/* Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "15px",
+          marginBottom: "14px",
         }}
       >
-        <h3
-          style={{
-            color: "#888",
-            fontSize: "0.8rem",
-            textTransform: "uppercase",
-            margin: 0,
-          }}
-        >
-          📈 STRENGTH PROGRESS
-        </h3>
-
+        <span className="section-title">Strength Progress</span>
         <select
           value={selectedExercise}
           onChange={(e) => setSelectedExercise(e.target.value)}
+          className="cyber-input"
           style={{
-            padding: "5px",
-            backgroundColor: "#222",
-            color: "white",
-            border: "1px solid #444",
-            fontSize: "0.8rem",
-            maxWidth: "150px",
+            width: "auto",
+            maxWidth: "160px",
+            padding: "6px 10px",
+            fontSize: "0.78rem",
           }}
         >
           {exerciseList.map((name) => (
@@ -115,33 +143,148 @@ export default function ExerciseChart({ history }) {
         </select>
       </div>
 
+      {/* Quick stats */}
+      {chartData.length > 1 && (
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          <div
+            style={{
+              flex: 1,
+              background: "var(--surface-2)",
+              borderRadius: "var(--radius-sm)",
+              padding: "8px 10px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 900,
+                fontSize: "1.3rem",
+                color: "var(--text-1)",
+                lineHeight: 1,
+              }}
+            >
+              {maxWeight}
+            </div>
+            <div className="label" style={{ marginTop: "2px" }}>
+              Peak (kg)
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              background: "var(--surface-2)",
+              borderRadius: "var(--radius-sm)",
+              padding: "8px 10px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 900,
+                fontSize: "1.3rem",
+                color: gain >= 0 ? "var(--green)" : "#ef4444",
+                lineHeight: 1,
+              }}
+            >
+              {gain >= 0 ? "+" : ""}
+              {gain}
+            </div>
+            <div className="label" style={{ marginTop: "2px" }}>
+              Total Gain
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              background: "var(--surface-2)",
+              borderRadius: "var(--radius-sm)",
+              padding: "8px 10px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 900,
+                fontSize: "1.3rem",
+                color: "var(--text-1)",
+                lineHeight: 1,
+              }}
+            >
+              {chartData.length}
+            </div>
+            <div className="label" style={{ marginTop: "2px" }}>
+              Sessions
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart */}
       {chartData.length > 1 ? (
-        <div style={{ width: "100%", height: 250 }}>
+        <div style={{ width: "100%", height: 200 }}>
           <ResponsiveContainer>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+            <LineChart
+              data={chartData}
+              margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+            >
+              <defs>
+                <linearGradient id="emberGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#ff4500" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="#ff6030" stopOpacity={1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="2 4"
+                stroke="rgba(255,255,255,0.04)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="date"
-                stroke="#666"
-                fontSize={10}
-                tickMargin={10}
-              />
-              <YAxis stroke="#666" fontSize={10} domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#000",
-                  border: "1px solid #ef4444",
+                stroke="transparent"
+                tick={{
+                  fill: "var(--text-3)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono)",
                 }}
-                labelStyle={{ color: "#888", marginBottom: "5px" }}
-                itemStyle={{ color: "#fff", fontWeight: "bold" }}
+                tickMargin={8}
+              />
+              <YAxis
+                stroke="transparent"
+                tick={{
+                  fill: "var(--text-3)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono)",
+                }}
+                domain={["auto", "auto"]}
+              />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{
+                  stroke: "rgba(255,69,0,0.2)",
+                  strokeWidth: 1,
+                  strokeDasharray: "4 4",
+                }}
               />
               <Line
                 type="monotone"
                 dataKey="weight"
-                stroke="#ef4444"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#ef4444" }}
-                activeDot={{ r: 6, fill: "#fff" }}
+                stroke="url(#emberGrad)"
+                strokeWidth={2.5}
+                dot={{
+                  r: 3.5,
+                  fill: "var(--ember)",
+                  stroke: "var(--bg)",
+                  strokeWidth: 2,
+                }}
+                activeDot={{
+                  r: 6,
+                  fill: "#fff",
+                  stroke: "var(--ember)",
+                  strokeWidth: 2,
+                }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -150,12 +293,13 @@ export default function ExerciseChart({ history }) {
         <div
           style={{
             textAlign: "center",
-            padding: "30px",
-            color: "#444",
-            fontSize: "0.8rem",
+            padding: "32px 0",
+            color: "var(--text-3)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.72rem",
           }}
         >
-          Select an exercise you have done at least twice to see the graph. 📉
+          Log this exercise at least twice to see the trend.
         </div>
       )}
     </motion.div>

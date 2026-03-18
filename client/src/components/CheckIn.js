@@ -3,12 +3,31 @@ import { useState, useEffect, useCallback } from "react";
 import ProgressChart from "./ProgressChart";
 import { motion, AnimatePresence } from "framer-motion";
 
+const STATUS_CONFIG = {
+  RED: {
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.08)",
+    border: "rgba(239,68,68,0.30)",
+    label: "CRITICAL",
+  },
+  YELLOW: {
+    color: "#facc15",
+    bg: "rgba(250,204,21,0.08)",
+    border: "rgba(250,204,21,0.30)",
+    label: "WARNING",
+  },
+  GREEN: {
+    color: "#22c55e",
+    bg: "rgba(34,197,94,0.08)",
+    border: "rgba(34,197,94,0.30)",
+    label: "OPTIMAL",
+  },
+};
+
 export default function CheckIn({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
-
-  // FORM STATE
   const [checkInForm, setCheckInForm] = useState({
     currentWeight: "",
     avgSleep: "",
@@ -18,14 +37,10 @@ export default function CheckIn({ apiBase, userId }) {
     strengthTrend: "same",
   });
 
-  // 🔄 FETCH HISTORY
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/api/checkin/history/${userId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data);
-      }
+      if (res.ok) setHistory(await res.json());
     } catch (err) {
       console.error("History fetch failed");
     }
@@ -35,66 +50,40 @@ export default function CheckIn({ apiBase, userId }) {
     fetchHistory();
   }, [fetchHistory]);
 
-  // 🧠 THE TRUTH LOGIC (Client Side Brutality)
   const getBrutalFeedback = (data) => {
     const sleep = parseFloat(data.avgSleep);
     const protein = parseFloat(data.dailyProtein);
     const weight = parseFloat(data.currentWeight);
     const days = parseFloat(data.workoutDays);
-
     if (days < 3)
-      return {
-        msg: "❌ Part-time effort gets part-time results.",
-        color: "#ef4444",
-        status: "RED",
-      };
+      return { msg: "Part-time effort gets part-time results.", status: "RED" };
     if (sleep < 6)
       return {
-        msg: "🧟 You are sleeping like a zombie. Recovery failed.",
-        color: "#ef4444",
+        msg: "You're sleeping like a zombie. Recovery failed.",
         status: "RED",
       };
     if (protein < weight * 1.5)
-      return {
-        msg: "🐥 Not enough fuel. You are wasting reps.",
-        color: "#facc15",
-        status: "YELLOW",
-      };
+      return { msg: "Not enough fuel. You're wasting reps.", status: "YELLOW" };
     if (data.strengthTrend === "decreasing")
       return {
-        msg: "📉 Strength is dropping. Eat more or sleep more.",
-        color: "#facc15",
+        msg: "Strength is dropping. Eat more or sleep more.",
         status: "YELLOW",
       };
-
-    return {
-      msg: "🦍 Solid week. You represent the 1%.",
-      color: "#22c55e",
-      status: "GREEN",
-    };
+    return { msg: "Solid week. You represent the 1%.", status: "GREEN" };
   };
 
-  // SUBMIT HANDLER
   const handleCheckInSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResult(null);
-
-    // 1. Calculate Brutal Feedback Locally (Instant)
     const feedback = getBrutalFeedback(checkInForm);
-
     setTimeout(async () => {
       try {
-        const payload = { ...checkInForm, userId: userId };
-
-        // 2. Save to Backend (Quietly)
         await fetch(`${apiBase}/api/checkin/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...checkInForm, userId }),
         });
-
-        // 3. Show Result
         setResult(feedback);
         fetchHistory();
       } catch (err) {
@@ -104,279 +93,500 @@ export default function CheckIn({ apiBase, userId }) {
     }, 1000);
   };
 
+  const field = (key, val) => setCheckInForm((f) => ({ ...f, [key]: val }));
+
   return (
-    <div style={{ paddingBottom: "100px" }}>
-      {/* 📊 GRAPH SECTION */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        paddingBottom: "8px",
+      }}
+    >
+      {/* ── LIVE METRICS CHART ── */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{
-          padding: "20px",
-          marginBottom: "20px",
-          background: "#111",
-          borderRadius: "10px",
-          border: "1px solid #333",
-        }}
+        className="card"
       >
-        <h3
-          style={{
-            color: "#888",
-            fontSize: "0.8rem",
-            marginBottom: "10px",
-            letterSpacing: "1px",
-            margin: 0,
-          }}
-        >
-          LIVE METRICS
-        </h3>
+        <div className="section-header">
+          <span className="section-title">Live Metrics</span>
+          <span className="badge badge--ember">{history.length} entries</span>
+        </div>
         <ProgressChart data={history} />
       </motion.div>
 
-      {/* 📝 RESULT DISPLAY (THE TRUTH CARD) */}
-      <AnimatePresence>
-        {result && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            style={{
-              padding: "30px",
-              marginBottom: "30px",
-              textAlign: "center",
-              background: "#000",
-              border: `2px solid ${result.color}`,
-              borderRadius: "10px",
-              boxShadow: `0 0 50px ${result.color}40`, // Glow effect
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "4rem",
-                fontWeight: "900",
-                margin: 0,
-                lineHeight: 1,
-                color: result.color,
-                textShadow: `0 0 20px ${result.color}`,
-              }}
-            >
-              {result.status}
-            </h2>
+      {/* ── TRUTH RESULT CARD ── */}
+      <AnimatePresence mode="wait">
+        {result &&
+          (() => {
+            const cfg = STATUS_CONFIG[result.status];
+            return (
+              <motion.div
+                key="result"
+                initial={{ scale: 0.88, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.88, opacity: 0, y: -10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                style={{
+                  padding: "32px 24px 28px",
+                  textAlign: "center",
+                  background: cfg.bg,
+                  border: `1px solid ${cfg.border}`,
+                  borderRadius: "var(--radius-lg)",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Glow blob */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "-60px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "200px",
+                    height: "200px",
+                    background: `radial-gradient(circle, ${cfg.color}22 0%, transparent 70%)`,
+                    pointerEvents: "none",
+                  }}
+                />
 
-            <p
+                {/* Status pill */}
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 400 }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 20px",
+                    borderRadius: "99px",
+                    border: `1px solid ${cfg.border}`,
+                    background: `${cfg.color}18`,
+                    marginBottom: "20px",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "7px",
+                      height: "7px",
+                      borderRadius: "50%",
+                      background: cfg.color,
+                      display: "block",
+                      boxShadow: `0 0 8px ${cfg.color}`,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 900,
+                      fontSize: "0.95rem",
+                      letterSpacing: "2px",
+                      color: cfg.color,
+                    }}
+                  >
+                    {cfg.label}
+                  </span>
+                </motion.div>
+
+                {/* Big status word */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 900,
+                    fontStyle: "italic",
+                    fontSize: "4.5rem",
+                    lineHeight: 1,
+                    color: cfg.color,
+                    textShadow: `0 0 40px ${cfg.color}55`,
+                    marginBottom: "18px",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  {result.status}
+                </motion.div>
+
+                {/* Message */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "1.05rem",
+                    fontWeight: 500,
+                    fontStyle: "italic",
+                    color: "var(--text-1)",
+                    marginBottom: "28px",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  "{result.msg}"
+                </motion.p>
+
+                <button
+                  onClick={() => setResult(null)}
+                  className="ghost-btn"
+                  style={{
+                    margin: "0 auto",
+                    width: "auto",
+                    padding: "10px 28px",
+                  }}
+                >
+                  Accept Reality
+                </button>
+              </motion.div>
+            );
+          })()}
+      </AnimatePresence>
+
+      {/* ── CHECK-IN FORM ── */}
+      <AnimatePresence>
+        {!result && (
+          <motion.form
+            key="form"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            onSubmit={handleCheckInSubmit}
+            className="card"
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            {/* Form header */}
+            <div
               style={{
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                margin: "20px 0",
-                color: "white",
-                fontStyle: "italic",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              "{result.msg}"
-            </p>
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 900,
+                  fontSize: "1.3rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                WEEKLY CHECK-IN
+              </span>
+              <span className="badge badge--ember">
+                Week {history.length + 1}
+              </span>
+            </div>
+
+            <div className="divider" style={{ margin: "0" }} />
+
+            {/* Weight */}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+            >
+              <label className="label">Current Weight</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  placeholder="0"
+                  type="number"
+                  required
+                  onChange={(e) => field("currentWeight", e.target.value)}
+                  className="cyber-input"
+                  style={{ paddingRight: "44px" }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    right: "14px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.72rem",
+                    color: "var(--text-3)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  kg
+                </span>
+              </div>
+            </div>
+
+            {/* Sleep + Protein */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <label className="label">Avg Sleep</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    placeholder="7"
+                    type="number"
+                    required
+                    onChange={(e) => field("avgSleep", e.target.value)}
+                    className="cyber-input"
+                    style={{ paddingRight: "42px" }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "14px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.72rem",
+                      color: "var(--text-3)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    hrs
+                  </span>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <label className="label">Daily Protein</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    placeholder="150"
+                    type="number"
+                    required
+                    onChange={(e) => field("dailyProtein", e.target.value)}
+                    className="cyber-input"
+                    style={{ paddingRight: "32px" }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "14px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.72rem",
+                      color: "var(--text-3)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    g
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Workout days + Strength trend */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <label className="label">Gym Days / Week</label>
+                <input
+                  placeholder="4"
+                  type="number"
+                  required
+                  onChange={(e) => field("workoutDays", e.target.value)}
+                  className="cyber-input"
+                />
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <label className="label">Strength Trend</label>
+                <select
+                  onChange={(e) => field("strengthTrend", e.target.value)}
+                  className="cyber-input"
+                >
+                  <option value="same">Flat ➖</option>
+                  <option value="increasing">Going Up ⬆️</option>
+                  <option value="decreasing">Going Down ⬇️</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Calories level — visual toggle */}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+            >
+              <label className="label">Calorie Target</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {["deficit", "maintenance", "surplus"].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => field("caloriesLevel", opt)}
+                    className={`chip ${checkInForm.caloriesLevel === opt ? "chip--active" : ""}`}
+                    style={{ flex: 1, textAlign: "center" }}
+                  >
+                    {opt === "deficit"
+                      ? "Cut"
+                      : opt === "maintenance"
+                        ? "Maintain"
+                        : "Bulk"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <button
-              onClick={() => setResult(null)}
-              style={{
-                background: "#222",
-                color: "white",
-                border: "1px solid #444",
-                padding: "10px 20px",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                marginTop: "10px",
-              }}
+              type="submit"
+              disabled={loading}
+              className="neon-btn"
+              style={{ marginTop: "4px", position: "relative" }}
             >
-              ACCEPT REALITY
+              {loading ? (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      border: "2px solid rgba(255,255,255,0.3)",
+                      borderTopColor: "white",
+                      borderRadius: "50%",
+                      animation: "spin 0.7s linear infinite",
+                      display: "inline-block",
+                    }}
+                  />
+                  Analyzing…
+                </span>
+              ) : (
+                "Get The Truth"
+              )}
             </button>
-          </motion.div>
+          </motion.form>
         )}
       </AnimatePresence>
 
-      {/* ✍️ INPUT FORM (Hidden when result is shown) */}
-      {!result && (
-        <motion.form
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          onSubmit={handleCheckInSubmit}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "15px",
-            padding: "20px",
-            background: "#111",
-            borderRadius: "10px",
-            border: "1px solid #333",
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              color: "white",
-              fontSize: "1.2rem",
-              borderBottom: "1px solid #333",
-              paddingBottom: "10px",
-            }}
-          >
-            WEEKLY LOG
-          </h3>
-
-          <input
-            name="currentWeight"
-            placeholder="Current Weight (kg)"
-            type="number"
-            required
-            onChange={(e) =>
-              setCheckInForm({ ...checkInForm, currentWeight: e.target.value })
-            }
-            style={inputStyle}
-          />
-
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              name="avgSleep"
-              placeholder="Avg Sleep (hrs)"
-              type="number"
-              required
-              onChange={(e) =>
-                setCheckInForm({ ...checkInForm, avgSleep: e.target.value })
-              }
-              style={inputStyle}
-            />
-            <input
-              name="dailyProtein"
-              placeholder="Daily Protein (g)"
-              type="number"
-              required
-              onChange={(e) =>
-                setCheckInForm({ ...checkInForm, dailyProtein: e.target.value })
-              }
-              style={inputStyle}
-            />
+      {/* ── HISTORY ARCHIVES ── */}
+      {history.length > 0 && (
+        <div>
+          <div className="section-header" style={{ marginBottom: "10px" }}>
+            <span className="section-title">Archives</span>
+            <span className="badge">{history.length} records</span>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              name="workoutDays"
-              placeholder="Gym Days/Week"
-              type="number"
-              required
-              onChange={(e) =>
-                setCheckInForm({ ...checkInForm, workoutDays: e.target.value })
-              }
-              style={inputStyle}
-            />
-            <select
-              name="strengthTrend"
-              onChange={(e) =>
-                setCheckInForm({
-                  ...checkInForm,
-                  strengthTrend: e.target.value,
-                })
-              }
-              style={inputStyle}
-            >
-              <option value="same">Strength: Flat ➖</option>
-              <option value="increasing">Strength: Up ⬆️</option>
-              <option value="decreasing">Strength: Down ⬇️</option>
-            </select>
-          </div>
-
-          <button type="submit" disabled={loading} style={btnStyle}>
-            {loading ? "ANALYZING..." : "GET TRUTH"}
-          </button>
-        </motion.form>
-      )}
-
-      {/* 📜 HISTORY LIST */}
-      <div style={{ marginTop: "30px" }}>
-        <h3
-          style={{
-            color: "#666",
-            fontSize: "0.8rem",
-            marginBottom: "15px",
-            letterSpacing: "2px",
-          }}
-        >
-          ARCHIVES
-        </h3>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {history.map((record) => (
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              key={record._id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "15px",
-                background: "#111",
-                borderRadius: "5px",
-                borderLeft: `4px solid ${
-                  record.status === "RED"
-                    ? "#ef4444"
-                    : record.status === "YELLOW"
-                    ? "#facc15"
-                    : "#22c55e"
-                }`,
-              }}
-            >
-              <div>
-                <span
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {history.map((record, idx) => {
+              const cfg = STATUS_CONFIG[record.status] || STATUS_CONFIG.GREEN;
+              return (
+                <motion.div
+                  key={record._id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.04 }}
                   style={{
-                    display: "block",
-                    fontSize: "0.9rem",
-                    fontWeight: "bold",
-                    color: "white",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "12px 16px",
+                    background: "var(--surface-1)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)",
+                    borderLeft: `3px solid ${cfg.color}`,
+                    transition: "border-color 0.2s",
                   }}
                 >
-                  {new Date(record.weekStartDate).toLocaleDateString()}
-                </span>
-                <span style={{ fontSize: "0.8rem", color: "#888" }}>
-                  {record.currentWeight}kg • {record.workoutDays} days
-                </span>
-              </div>
-              <span
-                style={{
-                  fontWeight: "bold",
-                  color:
-                    record.status === "RED"
-                      ? "#ef4444"
-                      : record.status === "YELLOW"
-                      ? "#facc15"
-                      : "#22c55e",
-                }}
-              >
-                {record.status}
-              </span>
-            </motion.div>
-          ))}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-body)",
+                        fontWeight: 600,
+                        fontSize: "0.88rem",
+                        color: "var(--text-1)",
+                      }}
+                    >
+                      {new Date(record.weekStartDate).toLocaleDateString(
+                        "en-IN",
+                        { day: "numeric", month: "short", year: "numeric" },
+                      )}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.65rem",
+                        color: "var(--text-3)",
+                      }}
+                    >
+                      {record.currentWeight}kg · {record.workoutDays} days/wk ·{" "}
+                      {record.avgSleep}h sleep
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      background: cfg.bg,
+                      border: `1px solid ${cfg.border}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: cfg.color,
+                        display: "block",
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.62rem",
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        color: cfg.color,
+                      }}
+                    >
+                      {record.status}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
-
-const inputStyle = {
-  width: "100%",
-  padding: "15px",
-  background: "#222",
-  border: "1px solid #444",
-  color: "white",
-  borderRadius: "5px",
-  outline: "none",
-  fontWeight: "bold",
-};
-
-const btnStyle = {
-  width: "100%",
-  padding: "15px",
-  background: "white",
-  color: "black",
-  border: "none",
-  borderRadius: "5px",
-  fontWeight: "900",
-  cursor: "pointer",
-  fontSize: "1rem",
-  marginTop: "10px",
-};
