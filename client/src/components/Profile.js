@@ -9,38 +9,42 @@ export default function Profile({ apiBase, userId, onLogout }) {
   const [stats, setStats] = useState({ totalWorkouts: 0, totalVolume: 0 });
   const [loading, setLoading] = useState(false);
 
-  // 🎮 RPG LEVEL LOGIC
   const getLevelInfo = (volume) => {
     if (volume < 10000)
       return {
-        name: "Broccoli Head 🥦",
+        name: "Broccoli Head",
+        emoji: "🥦",
         color: "#a3e635",
         next: 10000,
-        desc: "Newbie gains loading...",
+        desc: "Newbie gains loading…",
       };
     if (volume < 50000)
       return {
-        name: "Gym Rat 🐀",
+        name: "Gym Rat",
+        emoji: "🐀",
         color: "#60a5fa",
         next: 50000,
-        desc: "Consistency is key!",
+        desc: "Consistency is key.",
       };
     if (volume < 200000)
       return {
-        name: "Iron Addict ⛓️",
+        name: "Iron Addict",
+        emoji: "⛓️",
         color: "#facc15",
         next: 200000,
         desc: "Respect earned.",
       };
     if (volume < 1000000)
       return {
-        name: "Silverback 🦍",
-        color: "#ef4444",
+        name: "Silverback",
+        emoji: "🦍",
+        color: "var(--ember)",
         next: 1000000,
         desc: "Beast mode activated.",
       };
     return {
-      name: "GREEK GOD ⚡",
+      name: "Greek God",
+      emoji: "⚡",
       color: "#c084fc",
       next: 10000000,
       desc: "You completed the gym.",
@@ -52,21 +56,18 @@ export default function Profile({ apiBase, userId, onLogout }) {
       try {
         const userRes = await fetch(`${apiBase}/api/user/${userId}`);
         if (userRes.ok) setUser(await userRes.json());
-
         const histRes = await fetch(`${apiBase}/api/workout/history/${userId}`);
         if (histRes.ok) {
           const histData = await histRes.json();
           setHistory(histData);
-
           let vol = 0;
-          histData.forEach((w) => {
-            w.exercises.forEach((ex) => {
+          histData.forEach((w) =>
+            w.exercises.forEach((ex) =>
               ex.sets.forEach((s) => {
                 vol += (Number(s.weight) || 0) * (Number(s.reps) || 0);
-              });
-            });
-          });
-
+              }),
+            ),
+          );
           setStats({ totalWorkouts: histData.length, totalVolume: vol });
         }
       } catch (err) {
@@ -100,190 +101,296 @@ export default function Profile({ apiBase, userId, onLogout }) {
   };
 
   if (!user)
-    return <div style={{ padding: "20px", color: "white" }}>Loading...</div>;
+    return (
+      <div
+        style={{
+          padding: "40px 20px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        <div
+          className="skeleton"
+          style={{ width: "80px", height: "80px", borderRadius: "50%" }}
+        />
+        <div className="skeleton" style={{ width: "160px", height: "20px" }} />
+        <div className="skeleton" style={{ width: "120px", height: "14px" }} />
+      </div>
+    );
 
   const level = getLevelInfo(stats.totalVolume);
   const progressPercent = Math.min((stats.totalVolume / level.next) * 100, 100);
+  const initial = user.name ? user.name[0].toUpperCase() : "U";
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      style={{ padding: "20px", color: "white" }}
+      style={{ display: "flex", flexDirection: "column", gap: "12px" }}
     >
-      {/* HEADER & LEVEL CARD */}
+      {/* ── HERO CARD ── */}
       <div
+        className="glass-card"
         style={{
+          padding: "28px 20px 24px",
           textAlign: "center",
-          marginBottom: "30px",
-          background:
-            "linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(30,30,30,0.5) 100%)",
-          padding: "20px",
-          borderRadius: "15px",
-          border: "1px solid #333",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Background glow blob */}
         <div
           style={{
-            width: "80px",
-            height: "80px",
-            background: "#ef4444",
+            position: "absolute",
+            top: "-40px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "200px",
+            height: "200px",
+            background: `radial-gradient(circle, ${level.color}22 0%, transparent 70%)`,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Avatar */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          style={{
+            width: "84px",
+            height: "84px",
+            background: `linear-gradient(135deg, ${level.color}33, var(--surface-3))`,
+            border: `2.5px solid ${level.color}66`,
             borderRadius: "50%",
-            margin: "0 auto 10px",
+            margin: "0 auto 14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "2rem",
-            fontWeight: "bold",
-            border: `3px solid ${level.color}`,
+            fontSize: "2.2rem",
+            fontFamily: "var(--font-display)",
+            fontWeight: 900,
+            color: "var(--text-1)",
+            position: "relative",
+            boxShadow: `0 0 32px ${level.color}22`,
           }}
         >
-          {user.name ? user.name[0].toUpperCase() : "U"}
-        </div>
-        <h2 style={{ margin: 0, fontSize: "1.5rem" }}>{user.name}</h2>
+          {initial}
+          {/* Level emoji bubble */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-2px",
+              right: "-2px",
+              width: "26px",
+              height: "26px",
+              background: "var(--surface-1)",
+              border: `1.5px solid ${level.color}55`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.85rem",
+            }}
+          >
+            {level.emoji}
+          </div>
+        </motion.div>
 
-        {/* RANK BADGE */}
-        <div style={{ marginTop: "10px" }}>
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 900,
+            fontSize: "1.6rem",
+            letterSpacing: "1px",
+            marginBottom: "6px",
+          }}
+        >
+          {user.name}
+        </div>
+
+        {/* Rank badge */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "5px 14px",
+            borderRadius: "99px",
+            background: `${level.color}18`,
+            border: `1px solid ${level.color}44`,
+            marginBottom: "6px",
+          }}
+        >
           <span
             style={{
-              background: level.color,
-              color: "black",
-              padding: "5px 10px",
-              borderRadius: "20px",
-              fontSize: "0.8rem",
-              fontWeight: "900",
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: "0.85rem",
+              color: level.color,
+              letterSpacing: "0.8px",
               textTransform: "uppercase",
             }}
           >
             {level.name}
           </span>
         </div>
+
         <p
           style={{
-            marginTop: "10px",
-            color: "#888",
-            fontSize: "0.8rem",
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.68rem",
+            color: "var(--text-3)",
             fontStyle: "italic",
+            marginBottom: "20px",
           }}
         >
           "{level.desc}"
         </p>
 
-        {/* PROGRESS BAR */}
-        <div style={{ marginTop: "20px", textAlign: "left" }}>
+        {/* XP bar */}
+        <div>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
-              fontSize: "0.7rem",
-              color: "#aaa",
-              marginBottom: "5px",
+              marginBottom: "6px",
             }}
           >
-            <span>XP: {(stats.totalVolume / 1000).toFixed(1)}k</span>
-            <span>Next: {(level.next / 1000).toFixed(0)}k</span>
+            <span className="label">
+              XP — {(stats.totalVolume / 1000).toFixed(1)}k kg
+            </span>
+            <span className="label">
+              Next: {(level.next / 1000).toFixed(0)}k kg
+            </span>
           </div>
-          <div
-            style={{
-              width: "100%",
-              height: "8px",
-              background: "#333",
-              borderRadius: "4px",
-              overflow: "hidden",
-            }}
-          >
+          <div className="progress-track">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 1 }}
-              style={{ height: "100%", background: level.color }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              className="progress-fill"
+              style={{
+                background: `linear-gradient(90deg, ${level.color}, ${level.color}cc)`,
+                boxShadow: `0 0 10px ${level.color}55`,
+              }}
             />
           </div>
+          <div style={{ textAlign: "right", marginTop: "4px" }}>
+            <span className="label">{progressPercent.toFixed(0)}%</span>
+          </div>
         </div>
       </div>
 
-      {/* STATS */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
-        <div style={statCardStyle}>
-          <div
-            style={{ fontSize: "2rem", fontWeight: "bold", color: "#ef4444" }}
+      {/* ── STATS ── */}
+      <div className="stagger" style={{ display: "flex", gap: "10px" }}>
+        <div className="stat-card">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 900,
+              fontSize: "2.4rem",
+              color: "var(--ember)",
+              lineHeight: 1,
+            }}
           >
             {stats.totalWorkouts}
-          </div>
-          <div
-            style={{
-              fontSize: "0.7rem",
-              color: "#888",
-              textTransform: "uppercase",
-            }}
-          >
-            Sessions
-          </div>
+          </motion.div>
+          <span className="label">Sessions</span>
         </div>
-        <div style={statCardStyle}>
-          <div
-            style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#3b82f6" }}
+        <div className="stat-card">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15, type: "spring", stiffness: 300 }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 900,
+              fontSize: "2rem",
+              color: "var(--blue)",
+              lineHeight: 1,
+            }}
           >
             {(stats.totalVolume / 1000).toFixed(1)}k
-          </div>
-          <div
+          </motion.div>
+          <span className="label">Kg Lifted</span>
+        </div>
+        <div className="stat-card">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
             style={{
-              fontSize: "0.7rem",
-              color: "#888",
-              textTransform: "uppercase",
+              fontFamily: "var(--font-display)",
+              fontWeight: 900,
+              fontSize: "2rem",
+              color: "var(--green)",
+              lineHeight: 1,
             }}
           >
-            Tons Lifted 🏗️
-          </div>
+            {
+              history.filter((w) => {
+                const d = new Date(w.date);
+                const now = new Date();
+                return d >= new Date(now.getFullYear(), now.getMonth(), 1);
+              }).length
+            }
+          </motion.div>
+          <span className="label">This Month</span>
         </div>
       </div>
 
-      <TruthCalendar history={history} />
+      {/* ── CALENDAR ── */}
+      <div className="card">
+        <div className="section-header">
+          <span className="section-title">Consistency Map</span>
+        </div>
+        <TruthCalendar history={history} />
+      </div>
 
-      {/* SETTINGS */}
+      {/* ── SETTINGS ── */}
       <form
         onSubmit={handleUpdate}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-          marginTop: "30px",
-        }}
+        className="card"
+        style={{ display: "flex", flexDirection: "column", gap: "14px" }}
       >
-        <h3
-          style={{
-            fontSize: "1rem",
-            borderBottom: "1px solid #333",
-            paddingBottom: "10px",
-            color: "#ccc",
-          }}
-        >
-          ⚙️ SETTINGS
-        </h3>
-        <div>
-          <label style={labelStyle}>Height (cm)</label>
+        <div className="section-header">
+          <span className="section-title">Settings</span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label className="label">Height (cm)</label>
           <input
             type="number"
             value={user.height || ""}
             onChange={(e) => setUser({ ...user, height: e.target.value })}
-            style={inputStyle}
+            className="cyber-input"
+            placeholder="170"
           />
         </div>
-        <div>
-          <label style={labelStyle}>Target Weight (kg)</label>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label className="label">Target Weight (kg)</label>
           <input
             type="number"
             value={user.targetWeight || ""}
             onChange={(e) => setUser({ ...user, targetWeight: e.target.value })}
-            style={inputStyle}
+            className="cyber-input"
+            placeholder="80"
           />
         </div>
-        <div>
-          <label style={labelStyle}>Diet Type</label>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label className="label">Diet Type</label>
           <select
             value={user.dietType || "Non-Veg"}
             onChange={(e) => setUser({ ...user, dietType: e.target.value })}
-            style={inputStyle}
+            className="cyber-input"
           >
             <option value="Non-Veg">Non-Veg</option>
             <option value="Eggetarian">Eggetarian</option>
@@ -291,57 +398,47 @@ export default function Profile({ apiBase, userId, onLogout }) {
             <option value="Vegan">Vegan</option>
           </select>
         </div>
-        <button type="submit" disabled={loading} style={btnStyle}>
-          {loading ? "SAVING..." : "SAVE CHANGES"}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="neon-btn"
+          style={{ marginTop: "4px" }}
+        >
+          {loading ? "Saving…" : "Save Changes"}
         </button>
       </form>
 
+      {/* ── LOGOUT ── */}
       <button
         onClick={onLogout}
         style={{
-          ...btnStyle,
-          background: "#222",
-          color: "#ef4444",
-          border: "1px solid #333",
-          marginTop: "20px",
+          width: "100%",
+          padding: "13px",
+          background: "transparent",
+          border: "1px solid var(--border-md)",
+          borderRadius: "var(--radius-md)",
+          color: "var(--text-3)",
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.72rem",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          cursor: "pointer",
+          transition: "border-color 0.2s, color 0.2s",
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.borderColor = "var(--ember-border)";
+          e.target.style.color = "var(--ember)";
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.borderColor = "var(--border-md)";
+          e.target.style.color = "var(--text-3)";
         }}
       >
-        LOGOUT
+        Sign Out
       </button>
+
+      <div style={{ height: "8px" }} />
     </motion.div>
   );
 }
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  background: "#111",
-  border: "1px solid #333",
-  color: "white",
-  borderRadius: "5px",
-  outline: "none",
-};
-const labelStyle = {
-  display: "block",
-  marginBottom: "5px",
-  fontSize: "0.8rem",
-  color: "#888",
-};
-const btnStyle = {
-  width: "100%",
-  padding: "15px",
-  background: "#ef4444",
-  color: "white",
-  border: "none",
-  borderRadius: "5px",
-  fontWeight: "bold",
-  cursor: "pointer",
-};
-const statCardStyle = {
-  flex: 1,
-  background: "#111",
-  padding: "15px",
-  borderRadius: "10px",
-  border: "1px solid #333",
-  textAlign: "center",
-};

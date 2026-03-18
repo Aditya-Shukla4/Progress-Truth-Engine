@@ -18,16 +18,11 @@ export default function WorkoutLog({ apiBase, userId }) {
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
-  const [showStats, setShowStats] = useState(false); // 📊 Toggle for Heavy Stats
-
-  // 🧠 MEMORY & SUGGESTIONS
+  const [showStats, setShowStats] = useState(false);
   const [suggestions, setSuggestions] = useState({});
   const [nameSuggestions, setNameSuggestions] = useState({});
-
-  // Share State
   const shareCardRef = useRef(null);
   const [shareData, setShareData] = useState(null);
-
   const [log, setLog] = useState({
     workoutName: "",
     exercises: [
@@ -35,30 +30,27 @@ export default function WorkoutLog({ apiBase, userId }) {
     ],
   });
 
-  // 🔊 SOUND & CONFETTI
   const playSuccessSound = () => {
     const audio = new Audio(
       "https://actions.google.com/sounds/v1/cartoon/pop.ogg",
     );
     audio.volume = 0.5;
-    audio.play().catch((e) => console.log("Audio play failed"));
+    audio.play().catch(() => {});
   };
 
   const triggerConfetti = () => {
     confetti({
-      particleCount: 150,
-      spread: 70,
+      particleCount: 120,
+      spread: 65,
       origin: { y: 0.6 },
-      colors: ["#ef4444", "#ffffff", "#000000"],
+      colors: ["#ff4500", "#ffffff", "#ff6030"],
     });
   };
 
-  // 1. DATA FETCHING
   const fetchData = useCallback(async () => {
     try {
       const resHist = await fetch(`${apiBase}/api/workout/history/${userId}`);
       if (resHist.ok) setHistory(await resHist.json());
-
       const resTemp = await fetch(`${apiBase}/api/template/${userId}`);
       if (resTemp.ok) setTemplates(await resTemp.json());
     } catch (err) {
@@ -70,7 +62,6 @@ export default function WorkoutLog({ apiBase, userId }) {
     fetchData();
   }, [fetchData]);
 
-  // 🧠 THE BRAIN: FETCH LAST LOG
   const fetchLastLog = async (exerciseName, index) => {
     if (!exerciseName) return;
     try {
@@ -82,17 +73,16 @@ export default function WorkoutLog({ apiBase, userId }) {
         setSuggestions((prev) => ({ ...prev, [index]: data.sets }));
       } else {
         setSuggestions((prev) => {
-          const newState = { ...prev };
-          delete newState[index];
-          return newState;
+          const n = { ...prev };
+          delete n[index];
+          return n;
         });
       }
     } catch (err) {
-      console.error("Brain freeze 🥶", err);
+      console.error("Brain freeze", err);
     }
   };
 
-  // 2. SAVE WORKOUT
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -120,15 +110,14 @@ export default function WorkoutLog({ apiBase, userId }) {
         fetchData();
       }
     } catch (err) {
-      alert("Error");
+      alert("Error saving workout");
     }
     setLoading(false);
   };
 
-  // 3. TEMPLATE LOGIC
   const handleSaveTemplate = async () => {
-    if (!log.workoutName) return alert("Session Name to likh bhai!");
-    if (!confirm(`Save "${log.workoutName}" as routine?`)) return;
+    if (!log.workoutName) return alert("Add a session name first!");
+    if (!confirm(`Save "${log.workoutName}" as a routine?`)) return;
     try {
       const res = await fetch(`${apiBase}/api/template/create`, {
         method: "POST",
@@ -140,11 +129,11 @@ export default function WorkoutLog({ apiBase, userId }) {
         }),
       });
       if (res.ok) {
-        alert("Saved! 💾");
+        alert("Routine saved!");
         fetchData();
       }
     } catch (err) {
-      alert("Fail");
+      alert("Save failed");
     }
   };
 
@@ -168,7 +157,7 @@ export default function WorkoutLog({ apiBase, userId }) {
   };
 
   const handleRestDay = async () => {
-    if (!confirm("Aaj Rest Day hai? 😴")) return;
+    if (!confirm("Log today as a rest day?")) return;
     setLoading(true);
     try {
       const res = await fetch(`${apiBase}/api/workout/add`, {
@@ -192,24 +181,25 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // HELPERS
   const handleDeleteTemplate = async (e, id) => {
     e.stopPropagation();
-    if (confirm("Delete Routine?")) {
+    if (confirm("Delete this routine?")) {
       await fetch(`${apiBase}/api/template/${id}`, { method: "DELETE" });
       fetchData();
     }
   };
+
   const handleDeleteWorkout = async (e, id) => {
     e.stopPropagation();
-    if (confirm("Delete Workout?")) {
+    if (confirm("Delete this workout?")) {
       await fetch(`${apiBase}/api/workout/${id}`, { method: "DELETE" });
       fetchData();
     }
   };
+
   const handleDeleteExercise = async (e, wId, exId) => {
     e.stopPropagation();
-    if (confirm("Remove Exercise?")) {
+    if (confirm("Remove this exercise?")) {
       await fetch(`${apiBase}/api/workout/${wId}/exercise/${exId}`, {
         method: "DELETE",
       });
@@ -225,34 +215,36 @@ export default function WorkoutLog({ apiBase, userId }) {
         { name: "", targetMuscle: "Chest", sets: [{ reps: "", weight: "" }] },
       ],
     });
+
   const addSet = (i) => {
     const newEx = [...log.exercises];
     newEx[i].sets.push({ reps: "", weight: "" });
     setLog({ ...log, exercises: newEx });
   };
+
   const updateEx = (i, f, v) => {
-    const newEx = [...log.exercises];
-    newEx[i][f] = v;
-    setLog({ ...log, exercises: newEx });
+    const n = [...log.exercises];
+    n[i][f] = v;
+    setLog({ ...log, exercises: n });
   };
   const updateSet = (i, j, f, v) => {
-    const newEx = [...log.exercises];
-    newEx[i].sets[j][f] = v;
-    setLog({ ...log, exercises: newEx });
+    const n = [...log.exercises];
+    n[i].sets[j][f] = v;
+    setLog({ ...log, exercises: n });
   };
   const toggleCard = (id) => setExpandedId(expandedId === id ? null : id);
 
   const getWorkoutStats = (w) => {
-    let totalVol = 0;
-    let best = { weight: 0, reps: 0, name: "" };
-    w.exercises.forEach((ex) => {
+    let totalVol = 0,
+      best = { weight: 0, reps: 0, name: "" };
+    w.exercises.forEach((ex) =>
       ex.sets.forEach((set) => {
         const weight = parseFloat(set.weight) || 0;
         const reps = parseFloat(set.reps) || 0;
         totalVol += weight * reps;
         if (weight > best.weight) best = { weight, reps, name: ex.name };
-      });
-    });
+      }),
+    );
     return { totalVolume: totalVol, bestLift: best.weight > 0 ? best : null };
   };
 
@@ -275,84 +267,92 @@ export default function WorkoutLog({ apiBase, userId }) {
     }, 200);
   };
 
+  const defaultSplits = [
+    "Push Day",
+    "Pull Day",
+    "Leg Day",
+    "Upper Body",
+    "Lower Body",
+    "Chest Day",
+    "Back Day",
+    "Arms",
+    "Shoulders",
+  ];
+  const historyNames = [...new Set(history.map((w) => w.workoutName))];
+  const allChips = [...new Set([...historyNames, ...defaultSplits])].slice(
+    0,
+    10,
+  );
+
+  const muscles = [
+    "Chest",
+    "Back",
+    "Legs",
+    "Shoulders",
+    "Arms",
+    "Core",
+    "Cardio",
+    "Other",
+  ];
+
   return (
-    <div>
-      {/* ⚠️ HIDDEN SHARE CARD */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* Hidden share card */}
       <div style={{ position: "absolute", left: "-9999px" }}>
         <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
       </div>
 
-      {/* 1️⃣ TOP SECTION: THE ACTION (LOGGING FORM) 🏋️‍♂️ */}
+      {/* ── LOG FORM ── */}
       <form
         onSubmit={handleSubmit}
-        style={{
-          ...cardStyle,
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-          marginBottom: "20px",
-        }}
+        className="card"
+        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
       >
-        {/* HEADER: Streak + Rest + Load */}
+        {/* Form header */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            borderBottom: "1px solid #333",
-            paddingBottom: "15px",
-            marginBottom: "5px",
             flexWrap: "wrap",
             gap: "10px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h3
+            <span
               style={{
-                color: "white",
-                fontSize: "1rem",
-                margin: 0,
-                fontWeight: "900",
-                letterSpacing: "-0.5px",
+                fontFamily: "var(--font-display)",
+                fontWeight: 900,
+                fontSize: "1.3rem",
+                letterSpacing: "1px",
+                color: "var(--text-1)",
               }}
             >
               LOG WORKOUT
-            </h3>
+            </span>
             <StreakFire history={history} />
           </div>
-
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               type="button"
               onClick={handleRestDay}
-              style={{
-                background: "none",
-                border: "1px solid #444",
-                color: "#888",
-                padding: "5px 10px",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontSize: "0.8rem",
-              }}
+              className="ghost-btn"
+              style={{ fontSize: "0.78rem", padding: "7px 12px" }}
             >
-              😴 Rest
+              😴 Rest Day
             </button>
             <select
               onChange={(e) => handleLoadTemplate(e.target.value)}
-              style={{
-                padding: "6px",
-                background: "#222",
-                color: "#fff",
-                border: "1px solid #444",
-                fontSize: "0.8rem",
-                borderRadius: "5px",
-                outline: "none",
-                cursor: "pointer",
-              }}
               defaultValue=""
+              className="cyber-input"
+              style={{
+                width: "auto",
+                padding: "7px 12px",
+                fontSize: "0.78rem",
+              }}
             >
               <option value="" disabled>
-                📂 Load Routine...
+                Load Routine…
               </option>
               {templates.map((t) => (
                 <option key={t._id} value={t._id}>
@@ -363,586 +363,677 @@ export default function WorkoutLog({ apiBase, userId }) {
           </div>
         </div>
 
-        {/* SESSION NAME + CHIPS */}
-        <div style={{ marginBottom: "15px" }}>
+        <div className="divider" style={{ margin: "0" }} />
+
+        {/* Session name */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <label className="label">Session Name</label>
           <input
-            placeholder="Session Name (e.g. Push Day)"
+            placeholder="e.g. Push Day"
             required
             value={log.workoutName}
             onChange={(e) => setLog({ ...log, workoutName: e.target.value })}
-            style={{ ...inputStyle, fontWeight: "bold", marginBottom: "8px" }}
-          />
-          {/* SMART CHIPS */}
-          {(() => {
-            const defaultSplits = [
-              "Push Day",
-              "Pull Day",
-              "Leg Day",
-              "Upper Body",
-              "Lower Body",
-              "Chest Day",
-              "Back Day",
-              "Arms",
-              "Shoulders",
-            ];
-            const historyNames = [
-              ...new Set(history.map((w) => w.workoutName)),
-            ];
-            const allSuggestions = [
-              ...new Set([...historyNames, ...defaultSplits]),
-            ].slice(0, 10);
-            return (
-              <div
-                className="hide-scrollbar"
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  overflowX: "auto",
-                  whiteSpace: "nowrap",
-                  paddingBottom: "5px",
-                }}
-              >
-                {allSuggestions.map((name, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setLog({ ...log, workoutName: name })}
-                    style={{
-                      background: log.workoutName === name ? "#ef4444" : "#222",
-                      color: log.workoutName === name ? "white" : "#ccc",
-                      border:
-                        log.workoutName === name
-                          ? "1px solid #ef4444"
-                          : "1px solid #444",
-                      padding: "6px 12px",
-                      borderRadius: "20px",
-                      fontSize: "0.75rem",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* EXERCISES LOOP */}
-        {log.exercises.map((ex, i) => (
-          <div
-            key={i}
+            className="cyber-input"
             style={{
-              background: "#000",
-              padding: "10px",
-              border: "1px solid #333",
-              borderRadius: "5px",
+              fontFamily: "var(--font-display)",
+              fontWeight: 700,
+              fontSize: "1rem",
+              letterSpacing: "0.5px",
+            }}
+          />
+          {/* Name chips */}
+          <div
+            className="hide-scrollbar"
+            style={{
+              display: "flex",
+              gap: "7px",
+              overflowX: "auto",
+              paddingBottom: "2px",
             }}
           >
-            <div
-              style={{
-                color: "#ef4444",
-                fontSize: "0.8rem",
-                marginBottom: "5px",
-                fontWeight: "bold",
-              }}
-            >
-              EXERCISE {i + 1}
-            </div>
+            {allChips.map((name, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setLog({ ...log, workoutName: name })}
+                className={`chip ${log.workoutName === name ? "chip--active" : ""}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* INPUT + MUSCLE SELECT */}
-            <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-              <div style={{ position: "relative", flex: 2 }}>
-                <input
-                  placeholder="Exercise Name"
-                  required
-                  value={ex.name}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    updateEx(i, "name", val);
-                    if (val.length > 0) {
-                      const matches = EXERCISE_DB.filter((item) =>
-                        item.name.toLowerCase().includes(val.toLowerCase()),
-                      ).slice(0, 5);
-                      setNameSuggestions((prev) => ({ ...prev, [i]: matches }));
-                    } else {
-                      setNameSuggestions((prev) => ({ ...prev, [i]: [] }));
-                    }
-                  }}
-                  onBlur={() => {
-                    setTimeout(
-                      () =>
-                        setNameSuggestions((prev) => ({ ...prev, [i]: [] })),
-                      200,
-                    );
-                    fetchLastLog(ex.name, i);
-                  }}
-                  style={{ ...inputStyle, width: "100%" }}
-                />
-                {nameSuggestions[i] && nameSuggestions[i].length > 0 && (
-                  <ul
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      width: "100%",
-                      background: "#222",
-                      border: "1px solid #444",
-                      listStyle: "none",
-                      padding: 0,
-                      margin: 0,
-                      zIndex: 10,
-                      maxHeight: "150px",
-                      overflowY: "auto",
+        {/* Exercises */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {log.exercises.map((ex, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="exercise-block"
+            >
+              {/* Exercise header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "10px",
+                }}
+              >
+                <span className="label" style={{ color: "var(--ember)" }}>
+                  Exercise {i + 1}
+                </span>
+              </div>
+
+              {/* Name + muscle row */}
+              <div
+                style={{ display: "flex", gap: "8px", marginBottom: "10px" }}
+              >
+                <div style={{ position: "relative", flex: 2 }}>
+                  <input
+                    placeholder="Exercise name…"
+                    required
+                    value={ex.name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateEx(i, "name", val);
+                      if (val.length > 0) {
+                        const matches = EXERCISE_DB.filter((item) =>
+                          item.name.toLowerCase().includes(val.toLowerCase()),
+                        ).slice(0, 5);
+                        setNameSuggestions((prev) => ({
+                          ...prev,
+                          [i]: matches,
+                        }));
+                      } else {
+                        setNameSuggestions((prev) => ({ ...prev, [i]: [] }));
+                      }
                     }}
-                  >
-                    {nameSuggestions[i].map((suggestion, idx) => (
-                      <li
-                        key={idx}
-                        onClick={() => {
-                          updateEx(i, "name", suggestion.name);
-                          updateEx(i, "targetMuscle", suggestion.muscle);
-                          setNameSuggestions((prev) => ({ ...prev, [i]: [] }));
-                          fetchLastLog(suggestion.name, i);
-                        }}
+                    onBlur={() => {
+                      setTimeout(
+                        () =>
+                          setNameSuggestions((prev) => ({ ...prev, [i]: [] })),
+                        200,
+                      );
+                      fetchLastLog(ex.name, i);
+                    }}
+                    className="cyber-input"
+                  />
+                  <AnimatePresence>
+                    {nameSuggestions[i]?.length > 0 && (
+                      <motion.ul
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="autocomplete-list hide-scrollbar"
+                      >
+                        {nameSuggestions[i].map((s, idx) => (
+                          <li
+                            key={idx}
+                            className="autocomplete-item"
+                            onClick={() => {
+                              updateEx(i, "name", s.name);
+                              updateEx(i, "targetMuscle", s.muscle);
+                              setNameSuggestions((prev) => ({
+                                ...prev,
+                                [i]: [],
+                              }));
+                              fetchLastLog(s.name, i);
+                            }}
+                          >
+                            <span>{s.name}</span>
+                            <span className="badge">{s.muscle}</span>
+                          </li>
+                        ))}
+                      </motion.ul>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <select
+                  value={ex.targetMuscle}
+                  onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
+                  className="cyber-input"
+                  style={{ flex: 1, cursor: "pointer" }}
+                >
+                  {muscles.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sets */}
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
+                {ex.sets.map((s, j) => (
+                  <div key={j}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        className="label"
+                        style={{ minWidth: "28px", textAlign: "center" }}
+                      >
+                        S{j + 1}
+                      </span>
+                      <input
+                        placeholder="kg"
+                        type="number"
+                        required
+                        value={s.weight}
+                        onChange={(e) =>
+                          updateSet(i, j, "weight", e.target.value)
+                        }
+                        className="cyber-input"
+                        style={{ flex: 1 }}
+                      />
+                      <span
+                        className="label"
+                        style={{ color: "var(--text-3)" }}
+                      >
+                        ×
+                      </span>
+                      <input
+                        placeholder="reps"
+                        type="number"
+                        required
+                        value={s.reps}
+                        onChange={(e) =>
+                          updateSet(i, j, "reps", e.target.value)
+                        }
+                        className="cyber-input"
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                    {suggestions[i]?.[j] && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         style={{
-                          padding: "10px",
-                          borderBottom: "1px solid #333",
-                          cursor: "pointer",
-                          color: "#ccc",
-                          fontSize: "0.9rem",
                           display: "flex",
                           justifyContent: "space-between",
+                          padding: "4px 36px 0",
+                          alignItems: "center",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.target.style.background = "#333")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.target.style.background = "#222")
-                        }
                       >
-                        <span>{suggestion.name}</span>
-                        <span style={{ fontSize: "0.7rem", color: "#666" }}>
-                          {suggestion.muscle}
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "0.65rem",
+                            color: "var(--text-3)",
+                          }}
+                        >
+                          Last: {suggestions[i][j].lastWeight}kg ×{" "}
+                          {suggestions[i][j].lastReps}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <select
-                value={ex.targetMuscle}
-                onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
-                style={{ ...inputStyle, flex: 1, cursor: "pointer" }}
-              >
-                <option value="Chest">Chest</option>
-                <option value="Back">Back</option>
-                <option value="Legs">Legs</option>
-                <option value="Shoulders">Shoulders</option>
-                <option value="Arms">Arms</option>
-                <option value="Core">Abs</option>
-                <option value="Cardio">Cardio</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            {/* SETS */}
-            {ex.sets.map((s, j) => (
-              <div key={j} style={{ marginBottom: "10px" }}>
-                <div
-                  style={{ display: "flex", gap: "10px", marginBottom: "2px" }}
-                >
-                  <input
-                    placeholder="kg"
-                    type="number"
-                    required
-                    value={s.weight}
-                    onChange={(e) => updateSet(i, j, "weight", e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                  <input
-                    placeholder="reps"
-                    type="number"
-                    required
-                    value={s.reps}
-                    onChange={(e) => updateSet(i, j, "reps", e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                </div>
-                {/* GHOST SUGGESTION */}
-                {suggestions[i] && suggestions[i][j] && (
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#666",
-                      fontStyle: "italic",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "0 5px",
-                    }}
-                  >
-                    <span>
-                      Last: {suggestions[i][j].lastWeight}kg ×{" "}
-                      {suggestions[i][j].lastReps}
-                    </span>
-                    <span style={{ color: "#facc15", fontWeight: "bold" }}>
-                      {suggestions[i][j].suggestion}
-                    </span>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "0.65rem",
+                            color: "var(--gold)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {suggestions[i][j].suggestion}
+                        </span>
+                      </motion.div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => addSet(i)}
-              style={{
-                width: "100%",
-                background: "#222",
-                color: "#888",
-                border: "none",
-                padding: "5px",
-                cursor: "pointer",
-              }}
-            >
-              + ADD SET
-            </button>
-          </div>
-        ))}
 
-        {/* FORM ACTIONS */}
-        <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => addSet(i)}
+                className="btn-dashed"
+                style={{ marginTop: "10px" }}
+              >
+                + Add Set
+              </button>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Form actions */}
+        <div style={{ display: "flex", gap: "8px" }}>
           <button
             type="button"
             onClick={addExercise}
-            style={{
-              flex: 1,
-              padding: "10px",
-              background: "none",
-              border: "1px dashed #444",
-              color: "#ccc",
-              cursor: "pointer",
-            }}
+            className="ghost-btn"
+            style={{ flex: 1 }}
           >
-            + ADD EXERCISE
+            + Exercise
           </button>
           <button
             type="button"
             onClick={handleSaveTemplate}
+            className="ghost-btn"
             style={{
               flex: 1,
-              padding: "10px",
-              background: "#222",
-              border: "1px solid #444",
-              color: "#ef4444",
-              cursor: "pointer",
-              fontWeight: "bold",
+              color: "var(--ember)",
+              borderColor: "var(--ember-border)",
             }}
           >
-            💾 SAVE ROUTINE
+            Save Routine
           </button>
         </div>
+
         <button
           type="submit"
           disabled={loading}
-          style={{
-            ...btnStyle,
-            background: "white",
-            color: "black",
-            fontSize: "1rem",
-          }}
+          className="neon-btn"
+          style={{ marginTop: "4px" }}
         >
-          FINISH & LOG
+          {loading ? "Saving…" : "Finish & Log Workout"}
         </button>
       </form>
 
-      {/* 2️⃣ MIDDLE: ACTIVE TOOLS (TIMER + PLATE CALCULATOR) ⏱️💿 */}
-      {/* Ye visible rahenge kyunki workout ke beech me chahiye */}
-      <div
-        style={{
-          marginBottom: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-        }}
-      >
+      {/* ── TOOLS: REST TIMER + PLATE CALC ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         <RestTimer />
         <PlateCalculator />
       </div>
 
-      {/* 3️⃣ BOTTOM: HISTORY LIST 📜 */}
-      <div style={{ marginTop: "20px" }}>
-        {/* Saved Routines */}
-        {templates.length > 0 && (
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "10px",
-              border: "1px dashed #333",
-            }}
-          >
-            <h4
-              style={{
-                margin: 0,
-                marginBottom: "10px",
-                color: "#666",
-                fontSize: "0.8rem",
-              }}
-            >
-              SAVED ROUTINES
-            </h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-              {templates.map((t) => (
-                <div
-                  key={t._id}
-                  style={{
-                    background: "#111",
-                    padding: "5px 10px",
-                    borderRadius: "5px",
-                    fontSize: "0.8rem",
-                    display: "flex",
-                    gap: "10px",
-                    alignItems: "center",
-                  }}
-                >
-                  <span>{t.name}</span>
-                  <span
-                    onClick={(e) => handleDeleteTemplate(e, t._id)}
-                    style={{ cursor: "pointer", color: "#ef4444" }}
-                  >
-                    ✕
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* ── SAVED ROUTINES ── */}
+      {templates.length > 0 && (
+        <div className="card">
+          <div className="section-header">
+            <span className="section-title">Saved Routines</span>
+            <span className="badge badge--ember">{templates.length}</span>
           </div>
-        )}
-
-        {/* Workout History */}
-        <AnimatePresence mode="popLayout">
-          {history.length === 0 ? (
-            <p style={{ color: "#444" }}>No logs yet.</p>
-          ) : (
-            history.map((w) => (
-              <motion.div
-                layout
-                key={w._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => toggleCard(w._id)}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {templates.map((t) => (
+              <div
+                key={t._id}
                 style={{
-                  padding: "15px",
-                  background: "#111",
-                  marginBottom: "10px",
-                  borderLeft:
-                    expandedId === w._id
-                      ? "3px solid #ef4444"
-                      : "3px solid white",
-                  cursor: "pointer",
-                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "5px 10px",
                 }}
               >
-                <div
+                <span
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.75rem",
+                    color: "var(--text-2)",
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                      {w.workoutName}
-                    </div>
-                    <div style={{ fontSize: "0.8rem", color: "#888" }}>
-                      {new Date(w.date).toLocaleDateString()}
-                    </div>
-                  </div>
+                  {t.name}
+                </span>
+                <button
+                  onClick={(e) => handleDeleteTemplate(e, t._id)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-3)",
+                    cursor: "pointer",
+                    lineHeight: 1,
+                    fontSize: "0.75rem",
+                    padding: "0 2px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── WORKOUT HISTORY ── */}
+      <div>
+        <div className="section-header" style={{ marginBottom: "12px" }}>
+          <span className="section-title">History</span>
+          <span className="badge">{history.length} sessions</span>
+        </div>
+
+        <AnimatePresence mode="popLayout">
+          {history.length === 0 ? (
+            <p
+              style={{
+                color: "var(--text-3)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.75rem",
+                textAlign: "center",
+                padding: "32px 0",
+              }}
+            >
+              No sessions logged yet.
+            </p>
+          ) : (
+            history.map((w, idx) => {
+              const isOpen = expandedId === w._id;
+              const stats = getWorkoutStats(w);
+              return (
+                <motion.div
+                  layout
+                  key={w._id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className={`history-item ${isOpen ? "history-item--active" : ""}`}
+                  onClick={() => toggleCard(w._id)}
+                >
+                  {/* Header row */}
                   <div
                     style={{
                       display: "flex",
+                      justifyContent: "space-between",
                       alignItems: "center",
-                      gap: "10px",
+                      padding: "14px 16px",
                     }}
                   >
-                    <button
-                      onClick={(e) => handleShare(e, w)}
+                    <div
                       style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: "1.2rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "3px",
                       }}
                     >
-                      📸
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteWorkout(e, w._id)}
+                      <span
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontWeight: 700,
+                          fontSize: "1.05rem",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        {w.workoutName}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "0.63rem",
+                          color: "var(--text-3)",
+                        }}
+                      >
+                        {new Date(w.date).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                        {stats.totalVolume > 0 && (
+                          <span
+                            style={{
+                              marginLeft: "10px",
+                              color: "var(--ember)",
+                            }}
+                          >
+                            {(stats.totalVolume / 1000).toFixed(1)}k kg
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div
                       style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: "1.2rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
                       }}
                     >
-                      🗑️
-                    </button>
-                    <div style={{ color: "#666" }}>
-                      {expandedId === w._id ? "🔼" : "🔽"}
+                      <button
+                        onClick={(e) => handleShare(e, w)}
+                        className="icon-btn"
+                        title="Share"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          width="15"
+                          height="15"
+                        >
+                          <path d="M15 7a2 2 0 100-4 2 2 0 000 4zM5 12a2 2 0 100-4 2 2 0 000 4zM15 17a2 2 0 100-4 2 2 0 000 4z" />
+                          <path
+                            d="M7.6 10.7l4.8 2.6M12.4 6.7L7.6 9.3"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteWorkout(e, w._id)}
+                        className="icon-btn"
+                        title="Delete"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          width="15"
+                          height="15"
+                        >
+                          <path
+                            d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <div
+                        style={{
+                          color: "var(--text-3)",
+                          fontSize: "0.8rem",
+                          marginLeft: "2px",
+                          transition: "transform 0.2s",
+                          transform: isOpen ? "rotate(180deg)" : "none",
+                        }}
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          width="14"
+                          height="14"
+                        >
+                          <path
+                            d="M4 6l4 4 4-4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <AnimatePresence>
-                  {expandedId === w._id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      style={{
-                        marginTop: "15px",
-                        borderTop: "1px solid #333",
-                        paddingTop: "10px",
-                      }}
-                    >
-                      {w.exercises.map((ex, k) => (
+
+                  {/* Expanded detail */}
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22 }}
+                        style={{ overflow: "hidden" }}
+                      >
                         <div
-                          key={k}
                           style={{
-                            marginBottom: "10px",
-                            paddingBottom: "10px",
-                            borderBottom:
-                              k === w.exercises.length - 1
-                                ? "none"
-                                : "1px dashed #222",
+                            borderTop: "1px solid var(--border)",
+                            padding: "14px 16px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
                           }}
                         >
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <div>
-                              <span
-                                style={{
-                                  color: "#ef4444",
-                                  fontSize: "0.9rem",
-                                  fontWeight: "bold",
-                                  marginRight: "10px",
-                                }}
-                              >
-                                {ex.name}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.7rem",
-                                  backgroundColor: "#222",
-                                  padding: "2px 5px",
-                                  borderRadius: "3px",
-                                  color: "#888",
-                                }}
-                              >
-                                {ex.targetMuscle || "Other"}
-                              </span>
-                            </div>
-                            <button
-                              onClick={(e) =>
-                                handleDeleteExercise(e, w._id, ex._id)
-                              }
+                          {w.exercises.length === 0 ? (
+                            <span
                               style={{
-                                background: "#222",
-                                border: "1px solid #333",
-                                color: "#888",
-                                cursor: "pointer",
-                                fontSize: "0.7rem",
-                                padding: "2px 6px",
-                                borderRadius: "4px",
+                                color: "var(--text-3)",
+                                fontFamily: "var(--font-mono)",
+                                fontSize: "0.72rem",
                               }}
                             >
-                              ✕ Remove
-                            </button>
-                          </div>
-                          <div
-                            style={{
-                              color: "#ccc",
-                              fontSize: "0.8rem",
-                              marginTop: "5px",
-                            }}
-                          >
-                            {ex.sets
-                              .map((s) => `${s.weight}kg x ${s.reps}`)
-                              .join(" | ")}
-                          </div>
+                              Rest Day 😴
+                            </span>
+                          ) : (
+                            w.exercises.map((ex, k) => (
+                              <div
+                                key={k}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "flex-start",
+                                  gap: "12px",
+                                }}
+                              >
+                                <div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "8px",
+                                      marginBottom: "3px",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontFamily: "var(--font-display)",
+                                        fontWeight: 700,
+                                        fontSize: "0.95rem",
+                                        color: "var(--text-1)",
+                                      }}
+                                    >
+                                      {ex.name}
+                                    </span>
+                                    <span className="badge">
+                                      {ex.targetMuscle || "Other"}
+                                    </span>
+                                  </div>
+                                  <span
+                                    style={{
+                                      fontFamily: "var(--font-mono)",
+                                      fontSize: "0.68rem",
+                                      color: "var(--text-3)",
+                                    }}
+                                  >
+                                    {ex.sets
+                                      .map((s) => `${s.weight}kg×${s.reps}`)
+                                      .join("  ·  ")}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) =>
+                                    handleDeleteExercise(e, w._id, ex._id)
+                                  }
+                                  className="icon-btn"
+                                  style={{
+                                    marginTop: "2px",
+                                    width: "28px",
+                                    height: "28px",
+                                  }}
+                                >
+                                  <svg
+                                    viewBox="0 0 14 14"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    width="11"
+                                    height="11"
+                                  >
+                                    <path
+                                      d="M2 2l10 10M12 2L2 12"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))
+                          )}
                         </div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })
           )}
         </AnimatePresence>
       </div>
 
-      {/* 4️⃣ FOOTER: HEAVY STATS & 1RM (COLLAPSIBLE) 📊 */}
-      {/* Charts aur 1RM yahan hain. Toggle kar sakte hain taaki clutter na ho */}
+      {/* ── ANALYTICS ── */}
       <div
         style={{
-          marginTop: "30px",
-          borderTop: "1px solid #333",
-          paddingTop: "20px",
+          borderTop: "1px solid var(--border)",
+          paddingTop: "16px",
+          marginTop: "4px",
         }}
       >
         <button
           onClick={() => setShowStats(!showStats)}
-          style={{
-            width: "100%",
-            padding: "10px",
-            background: "#222",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
+          className="ghost-btn"
+          style={{ width: "100%", justifyContent: "space-between" }}
         >
-          {showStats
-            ? "🔼 HIDE ANALYTICS (1RM & CHARTS)"
-            : "🔽 SHOW ANALYTICS (1RM & CHARTS)"}
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Analytics — 1RM & Charts
+          </span>
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            width="14"
+            height="14"
+            style={{
+              transform: showStats ? "rotate(180deg)" : "none",
+              transition: "transform 0.2s",
+            }}
+          >
+            <path
+              d="M4 6l4 4 4-4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
 
-        {showStats && (
-          <div style={{ marginTop: "20px" }}>
-            <PersonalRecords apiBase={apiBase} userId={userId} />
-            <OneRepMax /> {/* 👈 1RM YAHAN HAI */}
-            <MuscleSplitChart history={history} />
-            <ExerciseChart history={history} />
-          </div>
-        )}
+        <AnimatePresence>
+          {showStats && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              style={{ overflow: "hidden" }}
+            >
+              <div
+                style={{
+                  paddingTop: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <PersonalRecords apiBase={apiBase} userId={userId} />
+                <OneRepMax />
+                <MuscleSplitChart history={history} />
+                <ExerciseChart history={history} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
-
-const cardStyle = {
-  width: "100%",
-  padding: "20px",
-  backgroundColor: "#111",
-  border: "1px solid #333",
-};
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  backgroundColor: "#222",
-  border: "1px solid #444",
-  color: "white",
-  outline: "none",
-};
-const btnStyle = {
-  width: "100%",
-  padding: "15px",
-  fontWeight: "bold",
-  border: "none",
-  cursor: "pointer",
-};
