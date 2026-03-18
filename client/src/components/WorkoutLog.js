@@ -11,18 +11,17 @@ import ExerciseChart from "./ExerciseChart";
 import StreakFire from "./StreakFire";
 import PlateCalculator from "./PlateCalculator";
 import confetti from "canvas-confetti";
-import { EXERCISE_DB } from "../utils/exerciseDB"; // 👈 IMPORT MASTER LIST
+import { EXERCISE_DB } from "../utils/exerciseDB";
 
 export default function WorkoutLog({ apiBase, userId }) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
+  const [showStats, setShowStats] = useState(false); // 📊 Toggle for Heavy Stats
 
-  // 🧠 SUGGESTIONS STATE (The Memory)
+  // 🧠 MEMORY & SUGGESTIONS
   const [suggestions, setSuggestions] = useState({});
-
-  // 🔍 AUTO-COMPLETE STATE
   const [nameSuggestions, setNameSuggestions] = useState({});
 
   // Share State
@@ -36,7 +35,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     ],
   });
 
-  // 🔊 SOUND FUNCTION
+  // 🔊 SOUND & CONFETTI
   const playSuccessSound = () => {
     const audio = new Audio(
       "https://actions.google.com/sounds/v1/cartoon/pop.ogg",
@@ -45,7 +44,6 @@ export default function WorkoutLog({ apiBase, userId }) {
     audio.play().catch((e) => console.log("Audio play failed"));
   };
 
-  // 🎉 CONFETTI FUNCTION
   const triggerConfetti = () => {
     confetti({
       particleCount: 150,
@@ -55,7 +53,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     });
   };
 
-  // 1. FETCH HISTORY & TEMPLATES
+  // 1. DATA FETCHING
   const fetchData = useCallback(async () => {
     try {
       const resHist = await fetch(`${apiBase}/api/workout/history/${userId}`);
@@ -72,23 +70,16 @@ export default function WorkoutLog({ apiBase, userId }) {
     fetchData();
   }, [fetchData]);
 
-  // 🧠 THE BRAIN: FETCH LAST LOG FOR GHOST TEXT
+  // 🧠 THE BRAIN: FETCH LAST LOG
   const fetchLastLog = async (exerciseName, index) => {
     if (!exerciseName) return;
-
     try {
       const res = await fetch(
-        `${apiBase}/api/workout/last-log?userId=${userId}&exerciseName=${encodeURIComponent(
-          exerciseName,
-        )}`,
+        `${apiBase}/api/workout/last-log?userId=${userId}&exerciseName=${encodeURIComponent(exerciseName)}`,
       );
       const data = await res.json();
-
       if (data.found) {
-        setSuggestions((prev) => ({
-          ...prev,
-          [index]: data.sets,
-        }));
+        setSuggestions((prev) => ({ ...prev, [index]: data.sets }));
       } else {
         setSuggestions((prev) => {
           const newState = { ...prev };
@@ -101,7 +92,7 @@ export default function WorkoutLog({ apiBase, userId }) {
     }
   };
 
-  // 2. SAVE LOGIC
+  // 2. SAVE WORKOUT
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -134,13 +125,10 @@ export default function WorkoutLog({ apiBase, userId }) {
     setLoading(false);
   };
 
-  // 3. SAVE AS TEMPLATE
+  // 3. TEMPLATE LOGIC
   const handleSaveTemplate = async () => {
-    if (!log.workoutName)
-      return alert("Pehle Routine ka naam toh likh! (Session Name)");
-
-    if (!confirm(`Save "${log.workoutName}" as a permanent routine?`)) return;
-
+    if (!log.workoutName) return alert("Session Name to likh bhai!");
+    if (!confirm(`Save "${log.workoutName}" as routine?`)) return;
     try {
       const res = await fetch(`${apiBase}/api/template/create`, {
         method: "POST",
@@ -152,19 +140,17 @@ export default function WorkoutLog({ apiBase, userId }) {
         }),
       });
       if (res.ok) {
-        alert("Routine Saved! 💾");
+        alert("Saved! 💾");
         fetchData();
       }
     } catch (err) {
-      alert("Save failed");
+      alert("Fail");
     }
   };
 
-  // 4. LOAD TEMPLATE
   const handleLoadTemplate = (templateId) => {
     if (!templateId) return;
     const selected = templates.find((t) => t._id === templateId);
-
     if (selected) {
       setLog({
         workoutName: selected.name,
@@ -177,17 +163,12 @@ export default function WorkoutLog({ apiBase, userId }) {
           })),
         })),
       });
-
-      // Load karte hi sabka history fetch kar lo
-      selected.exercises.forEach((ex, i) => {
-        fetchLastLog(ex.name, i);
-      });
+      selected.exercises.forEach((ex, i) => fetchLastLog(ex.name, i));
     }
   };
 
-  // 5. HANDLE REST DAY
   const handleRestDay = async () => {
-    if (!confirm("Aaj pakka Rest Day hai? (Streak bach jayegi) 😴")) return;
+    if (!confirm("Aaj Rest Day hai? 😴")) return;
     setLoading(true);
     try {
       const res = await fetch(`${apiBase}/api/workout/add`, {
@@ -202,11 +183,11 @@ export default function WorkoutLog({ apiBase, userId }) {
       if (res.ok) {
         triggerConfetti();
         playSuccessSound();
-        alert("Rest Day Logged! Streak Saved. 🔥");
+        alert("Rest Day Logged!");
         fetchData();
       }
     } catch (err) {
-      alert("Error logging rest day");
+      alert("Error");
     }
     setLoading(false);
   };
@@ -214,23 +195,26 @@ export default function WorkoutLog({ apiBase, userId }) {
   // HELPERS
   const handleDeleteTemplate = async (e, id) => {
     e.stopPropagation();
-    if (!confirm("Ye Routine uda du?")) return;
-    await fetch(`${apiBase}/api/template/${id}`, { method: "DELETE" });
-    fetchData();
+    if (confirm("Delete Routine?")) {
+      await fetch(`${apiBase}/api/template/${id}`, { method: "DELETE" });
+      fetchData();
+    }
   };
-  const handleDeleteWorkout = async (e, workoutId) => {
+  const handleDeleteWorkout = async (e, id) => {
     e.stopPropagation();
-    if (!confirm("Pura Workout uda du?")) return;
-    await fetch(`${apiBase}/api/workout/${workoutId}`, { method: "DELETE" });
-    fetchData();
+    if (confirm("Delete Workout?")) {
+      await fetch(`${apiBase}/api/workout/${id}`, { method: "DELETE" });
+      fetchData();
+    }
   };
-  const handleDeleteExercise = async (e, workoutId, exerciseId) => {
+  const handleDeleteExercise = async (e, wId, exId) => {
     e.stopPropagation();
-    if (!confirm("Sirf ye exercise hatani hai?")) return;
-    await fetch(`${apiBase}/api/workout/${workoutId}/exercise/${exerciseId}`, {
-      method: "DELETE",
-    });
-    fetchData();
+    if (confirm("Remove Exercise?")) {
+      await fetch(`${apiBase}/api/workout/${wId}/exercise/${exId}`, {
+        method: "DELETE",
+      });
+      fetchData();
+    }
   };
 
   const addExercise = () =>
@@ -241,54 +225,50 @@ export default function WorkoutLog({ apiBase, userId }) {
         { name: "", targetMuscle: "Chest", sets: [{ reps: "", weight: "" }] },
       ],
     });
-  const addSet = (exIdx) => {
+  const addSet = (i) => {
     const newEx = [...log.exercises];
-    newEx[exIdx].sets.push({ reps: "", weight: "" });
+    newEx[i].sets.push({ reps: "", weight: "" });
     setLog({ ...log, exercises: newEx });
   };
-  const updateEx = (idx, field, val) => {
+  const updateEx = (i, f, v) => {
     const newEx = [...log.exercises];
-    newEx[idx][field] = val;
+    newEx[i][f] = v;
     setLog({ ...log, exercises: newEx });
   };
-  const updateSet = (exIdx, sIdx, field, val) => {
+  const updateSet = (i, j, f, v) => {
     const newEx = [...log.exercises];
-    newEx[exIdx].sets[sIdx][field] = val;
+    newEx[i].sets[j][f] = v;
     setLog({ ...log, exercises: newEx });
   };
-  const toggleCard = (id) => {
-    if (expandedId === id) setExpandedId(null);
-    else setExpandedId(id);
-  };
-  const getWorkoutStats = (workout) => {
+  const toggleCard = (id) => setExpandedId(expandedId === id ? null : id);
+
+  const getWorkoutStats = (w) => {
     let totalVol = 0;
     let best = { weight: 0, reps: 0, name: "" };
-    workout.exercises.forEach((ex) => {
+    w.exercises.forEach((ex) => {
       ex.sets.forEach((set) => {
-        const w = parseFloat(set.weight) || 0;
-        const r = parseFloat(set.reps) || 0;
-        totalVol += w * r;
-        if (w > best.weight) {
-          best = { weight: w, reps: r, name: ex.name };
-        }
+        const weight = parseFloat(set.weight) || 0;
+        const reps = parseFloat(set.reps) || 0;
+        totalVol += weight * reps;
+        if (weight > best.weight) best = { weight, reps, name: ex.name };
       });
     });
     return { totalVolume: totalVol, bestLift: best.weight > 0 ? best : null };
   };
-  const handleShare = async (e, workout) => {
+
+  const handleShare = async (e, w) => {
     e.stopPropagation();
-    const stats = getWorkoutStats(workout);
-    setShareData({ workout, ...stats });
+    const stats = getWorkoutStats(w);
+    setShareData({ workout: w, ...stats });
     setTimeout(async () => {
       if (shareCardRef.current) {
         const canvas = await html2canvas(shareCardRef.current, {
           backgroundColor: null,
           scale: 2,
         });
-        const image = canvas.toDataURL("image/png");
         const link = document.createElement("a");
-        link.href = image;
-        link.download = `PTE_${workout.workoutName}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.download = `PTE_${w.workoutName}.png`;
         link.click();
         setShareData(null);
       }
@@ -297,15 +277,12 @@ export default function WorkoutLog({ apiBase, userId }) {
 
   return (
     <div>
-      <PersonalRecords apiBase={apiBase} userId={userId} />
-      <RestTimer />
-      <PlateCalculator />
-      <MuscleSplitChart history={history} />
-      <ExerciseChart history={history} />
-      <OneRepMax />
-      <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
+      {/* ⚠️ HIDDEN SHARE CARD */}
+      <div style={{ position: "absolute", left: "-9999px" }}>
+        <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
+      </div>
 
-      {/* LOG FORM */}
+      {/* 1️⃣ TOP SECTION: THE ACTION (LOGGING FORM) 🏋️‍♂️ */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -313,10 +290,10 @@ export default function WorkoutLog({ apiBase, userId }) {
           display: "flex",
           flexDirection: "column",
           gap: "15px",
-          marginTop: "20px",
+          marginBottom: "20px",
         }}
       >
-        {/* HEADER */}
+        {/* HEADER: Streak + Rest + Load */}
         <div
           style={{
             display: "flex",
@@ -330,8 +307,16 @@ export default function WorkoutLog({ apiBase, userId }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h3 style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>
-              LOG SESSION
+            <h3
+              style={{
+                color: "white",
+                fontSize: "1rem",
+                margin: 0,
+                fontWeight: "900",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              LOG WORKOUT
             </h3>
             <StreakFire history={history} />
           </div>
@@ -340,7 +325,6 @@ export default function WorkoutLog({ apiBase, userId }) {
             <button
               type="button"
               onClick={handleRestDay}
-              title="Log Rest Day"
               style={{
                 background: "none",
                 border: "1px solid #444",
@@ -353,7 +337,6 @@ export default function WorkoutLog({ apiBase, userId }) {
             >
               😴 Rest
             </button>
-
             <select
               onChange={(e) => handleLoadTemplate(e.target.value)}
               style={{
@@ -380,9 +363,8 @@ export default function WorkoutLog({ apiBase, userId }) {
           </div>
         </div>
 
-        {/* 👇 SESSION NAME SECTION WITH SMART CHIPS */}
+        {/* SESSION NAME + CHIPS */}
         <div style={{ marginBottom: "15px" }}>
-          {/* 1. INPUT FIELD */}
           <input
             placeholder="Session Name (e.g. Push Day)"
             required
@@ -390,10 +372,8 @@ export default function WorkoutLog({ apiBase, userId }) {
             onChange={(e) => setLog({ ...log, workoutName: e.target.value })}
             style={{ ...inputStyle, fontWeight: "bold", marginBottom: "8px" }}
           />
-
-          {/* 2. SMART CHIPS (PRE-DEFINED + HISTORY) */}
+          {/* SMART CHIPS */}
           {(() => {
-            // A. Standard Gym Bros Splits 🏋️‍♂️
             const defaultSplits = [
               "Push Day",
               "Pull Day",
@@ -405,17 +385,12 @@ export default function WorkoutLog({ apiBase, userId }) {
               "Arms",
               "Shoulders",
             ];
-
-            // B. Tera History (Unique names only)
             const historyNames = [
               ...new Set(history.map((w) => w.workoutName)),
             ];
-
-            // C. Merge (History Pehle + Phir Defaults) & Remove Duplicates
             const allSuggestions = [
               ...new Set([...historyNames, ...defaultSplits]),
             ].slice(0, 10);
-
             return (
               <div
                 className="hide-scrollbar"
@@ -433,14 +408,14 @@ export default function WorkoutLog({ apiBase, userId }) {
                     type="button"
                     onClick={() => setLog({ ...log, workoutName: name })}
                     style={{
-                      background: log.workoutName === name ? "#ef4444" : "#222", // Active color Red
+                      background: log.workoutName === name ? "#ef4444" : "#222",
                       color: log.workoutName === name ? "white" : "#ccc",
                       border:
                         log.workoutName === name
                           ? "1px solid #ef4444"
                           : "1px solid #444",
                       padding: "6px 12px",
-                      borderRadius: "20px", // Pill Shape
+                      borderRadius: "20px",
                       fontSize: "0.75rem",
                       cursor: "pointer",
                       transition: "all 0.2s",
@@ -454,6 +429,7 @@ export default function WorkoutLog({ apiBase, userId }) {
           })()}
         </div>
 
+        {/* EXERCISES LOOP */}
         {log.exercises.map((ex, i) => (
           <div
             key={i}
@@ -461,6 +437,7 @@ export default function WorkoutLog({ apiBase, userId }) {
               background: "#000",
               padding: "10px",
               border: "1px solid #333",
+              borderRadius: "5px",
             }}
           >
             <div
@@ -468,12 +445,14 @@ export default function WorkoutLog({ apiBase, userId }) {
                 color: "#ef4444",
                 fontSize: "0.8rem",
                 marginBottom: "5px",
+                fontWeight: "bold",
               }}
             >
               EXERCISE {i + 1}
             </div>
+
+            {/* INPUT + MUSCLE SELECT */}
             <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-              {/* 👇 SMART INPUT CONTAINER */}
               <div style={{ position: "relative", flex: 2 }}>
                 <input
                   placeholder="Exercise Name"
@@ -482,12 +461,9 @@ export default function WorkoutLog({ apiBase, userId }) {
                   onChange={(e) => {
                     const val = e.target.value;
                     updateEx(i, "name", val);
-
-                    // 🔍 FILTER LOGIC (Updated for Objects)
                     if (val.length > 0) {
-                      const matches = EXERCISE_DB.filter(
-                        (item) =>
-                          item.name.toLowerCase().includes(val.toLowerCase()), // Object.name check karo
+                      const matches = EXERCISE_DB.filter((item) =>
+                        item.name.toLowerCase().includes(val.toLowerCase()),
                       ).slice(0, 5);
                       setNameSuggestions((prev) => ({ ...prev, [i]: matches }));
                     } else {
@@ -504,8 +480,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                   }}
                   style={{ ...inputStyle, width: "100%" }}
                 />
-
-                {/* 👇 THE DROPDOWN LIST */}
                 {nameSuggestions[i] && nameSuggestions[i].length > 0 && (
                   <ul
                     style={{
@@ -527,12 +501,10 @@ export default function WorkoutLog({ apiBase, userId }) {
                       <li
                         key={idx}
                         onClick={() => {
-                          // ⚡ MAGIC HAPPENS HERE
-                          updateEx(i, "name", suggestion.name); // 1. Name Set karo
-                          updateEx(i, "targetMuscle", suggestion.muscle); // 2. Muscle Auto-Select karo!
-
-                          setNameSuggestions((prev) => ({ ...prev, [i]: [] })); // List band
-                          fetchLastLog(suggestion.name, i); // History fetch
+                          updateEx(i, "name", suggestion.name);
+                          updateEx(i, "targetMuscle", suggestion.muscle);
+                          setNameSuggestions((prev) => ({ ...prev, [i]: [] }));
+                          fetchLastLog(suggestion.name, i);
                         }}
                         style={{
                           padding: "10px",
@@ -551,13 +523,7 @@ export default function WorkoutLog({ apiBase, userId }) {
                         }
                       >
                         <span>{suggestion.name}</span>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            color: "#666",
-                            marginTop: "2px",
-                          }}
-                        >
+                        <span style={{ fontSize: "0.7rem", color: "#666" }}>
                           {suggestion.muscle}
                         </span>
                       </li>
@@ -565,7 +531,6 @@ export default function WorkoutLog({ apiBase, userId }) {
                   </ul>
                 )}
               </div>
-
               <select
                 value={ex.targetMuscle}
                 onChange={(e) => updateEx(i, "targetMuscle", e.target.value)}
@@ -576,11 +541,13 @@ export default function WorkoutLog({ apiBase, userId }) {
                 <option value="Legs">Legs</option>
                 <option value="Shoulders">Shoulders</option>
                 <option value="Arms">Arms</option>
-                <option value="Core">Abs/Core</option>
+                <option value="Core">Abs</option>
                 <option value="Cardio">Cardio</option>
                 <option value="Other">Other</option>
               </select>
             </div>
+
+            {/* SETS */}
             {ex.sets.map((s, j) => (
               <div key={j} style={{ marginBottom: "10px" }}>
                 <div
@@ -603,8 +570,7 @@ export default function WorkoutLog({ apiBase, userId }) {
                     style={{ ...inputStyle, flex: 1 }}
                   />
                 </div>
-
-                {/* 👻 GHOST TEXT: THE SUGGESTION */}
+                {/* GHOST SUGGESTION */}
                 {suggestions[i] && suggestions[i][j] && (
                   <div
                     style={{
@@ -644,6 +610,7 @@ export default function WorkoutLog({ apiBase, userId }) {
           </div>
         ))}
 
+        {/* FORM ACTIONS */}
         <div style={{ display: "flex", gap: "10px" }}>
           <button
             type="button"
@@ -675,18 +642,37 @@ export default function WorkoutLog({ apiBase, userId }) {
             💾 SAVE ROUTINE
           </button>
         </div>
-
         <button
           type="submit"
           disabled={loading}
-          style={{ ...btnStyle, background: "white", color: "black" }}
+          style={{
+            ...btnStyle,
+            background: "white",
+            color: "black",
+            fontSize: "1rem",
+          }}
         >
           FINISH & LOG
         </button>
       </form>
 
-      {/* HISTORY & TEMPLATES LIST */}
+      {/* 2️⃣ MIDDLE: ACTIVE TOOLS (TIMER + PLATE CALCULATOR) ⏱️💿 */}
+      {/* Ye visible rahenge kyunki workout ke beech me chahiye */}
+      <div
+        style={{
+          marginBottom: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+        }}
+      >
+        <RestTimer />
+        <PlateCalculator />
+      </div>
+
+      {/* 3️⃣ BOTTOM: HISTORY LIST 📜 */}
       <div style={{ marginTop: "20px" }}>
+        {/* Saved Routines */}
         {templates.length > 0 && (
           <div
             style={{
@@ -732,9 +718,7 @@ export default function WorkoutLog({ apiBase, userId }) {
           </div>
         )}
 
-        <h3 style={{ color: "#666", fontSize: "0.9rem", marginBottom: "10px" }}>
-          RECENT GRIND
-        </h3>
+        {/* Workout History */}
         <AnimatePresence mode="popLayout">
           {history.length === 0 ? (
             <p style={{ color: "#444" }}>No logs yet.</p>
@@ -899,6 +883,43 @@ export default function WorkoutLog({ apiBase, userId }) {
             ))
           )}
         </AnimatePresence>
+      </div>
+
+      {/* 4️⃣ FOOTER: HEAVY STATS & 1RM (COLLAPSIBLE) 📊 */}
+      {/* Charts aur 1RM yahan hain. Toggle kar sakte hain taaki clutter na ho */}
+      <div
+        style={{
+          marginTop: "30px",
+          borderTop: "1px solid #333",
+          paddingTop: "20px",
+        }}
+      >
+        <button
+          onClick={() => setShowStats(!showStats)}
+          style={{
+            width: "100%",
+            padding: "10px",
+            background: "#222",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          {showStats
+            ? "🔼 HIDE ANALYTICS (1RM & CHARTS)"
+            : "🔽 SHOW ANALYTICS (1RM & CHARTS)"}
+        </button>
+
+        {showStats && (
+          <div style={{ marginTop: "20px" }}>
+            <PersonalRecords apiBase={apiBase} userId={userId} />
+            <OneRepMax /> {/* 👈 1RM YAHAN HAI */}
+            <MuscleSplitChart history={history} />
+            <ExerciseChart history={history} />
+          </div>
+        )}
       </div>
     </div>
   );
