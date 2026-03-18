@@ -2,253 +2,345 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const PLATES = [
+  { weight: 25, color: "#ef4444", h: "80px", label: "25" },
+  { weight: 20, color: "#3b82f6", h: "76px", label: "20" },
+  { weight: 15, color: "#facc15", h: "68px", label: "15" },
+  { weight: 10, color: "#22c55e", h: "58px", label: "10" },
+  { weight: 5, color: "#e2e8f0", h: "44px", label: "5" },
+  {
+    weight: 2.5,
+    color: "#1e293b",
+    h: "36px",
+    label: "2.5",
+    border: "1px solid #475569",
+  },
+  {
+    weight: 1.25,
+    color: "#374151",
+    h: "30px",
+    label: "1.25",
+    border: "1px solid #6b7280",
+  },
+];
+
+const calculatePlates = (weight) => {
+  const bar = 20;
+  if (!weight || weight <= bar) return [];
+  let remaining = (weight - bar) / 2;
+  const result = [];
+  PLATES.forEach((p) => {
+    while (remaining >= p.weight - 0.001) {
+      result.push(p);
+      remaining = Math.round((remaining - p.weight) * 1000) / 1000;
+    }
+  });
+  return result;
+};
+
 export default function PlateCalculator() {
   const [targetWeight, setTargetWeight] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  // 🧮 THE MATHS LOGIC
-  const calculatePlates = (weight) => {
-    const barWeight = 20; // Standard Olympic Bar
-    if (!weight || weight <= barWeight) return [];
-
-    let remainingWeight = (weight - barWeight) / 2; // Per side weight
-    const plates = [];
-
-    // Standard Gym Plates (kg) & Colors
-    const availablePlates = [
-      { weight: 25, color: "#ef4444", height: "90px" }, // Red
-      { weight: 20, color: "#3b82f6", height: "90px" }, // Blue
-      { weight: 15, color: "#eab308", height: "80px" }, // Yellow
-      { weight: 10, color: "#22c55e", height: "70px" }, // Green
-      { weight: 5, color: "#ffffff", height: "50px" }, // White
-      {
-        weight: 2.5,
-        color: "#000000",
-        height: "40px",
-        border: "1px solid #444",
-      }, // Black
-      {
-        weight: 1.25,
-        color: "#silver",
-        height: "35px",
-        border: "1px solid #444",
-      }, // Silver
-    ];
-
-    availablePlates.forEach((p) => {
-      while (remainingWeight >= p.weight) {
-        plates.push(p);
-        remainingWeight -= p.weight;
-      }
-    });
-
-    return plates;
-  };
-
-  const calculatedPlates = calculatePlates(targetWeight);
+  const plates = calculatePlates(parseFloat(targetWeight));
+  const totalWeight =
+    plates.length > 0
+      ? 20 + plates.reduce((sum, p) => sum + p.weight, 0) * 2
+      : 20;
+  const isExact = Math.abs(totalWeight - parseFloat(targetWeight)) < 0.01;
 
   return (
     <div
       style={{
-        marginTop: "20px",
-        border: "1px solid #333",
-        borderRadius: "10px",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
         overflow: "hidden",
-        background: "#111",
+        background: "var(--surface-1)",
       }}
     >
-      {/* HEADER (CLICK TO OPEN) */}
-      <div
+      {/* Header toggle */}
+      <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          padding: "15px",
+          width: "100%",
+          padding: "14px 16px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           cursor: "pointer",
-          background: isOpen ? "#222" : "#111",
+          background: "transparent",
+          border: "none",
+          color: "var(--text-1)",
+          transition: "background 0.2s",
         }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "var(--surface-2)")
+        }
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "1.2rem" }}>🧮</span>
           <span
-            style={{ fontWeight: "bold", fontSize: "0.9rem", color: "#ccc" }}
+            style={{
+              width: "30px",
+              height: "30px",
+              background: "var(--surface-3)",
+              borderRadius: "var(--radius-sm)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.9rem",
+            }}
           >
-            IRON BRAIN (Calculator)
+            🧮
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Plate Calculator
           </span>
         </div>
-        <span style={{ color: "#666" }}>{isOpen ? "🔼" : "🔽"}</span>
-      </div>
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          width="14"
+          height="14"
+          style={{
+            color: "var(--text-3)",
+            transform: isOpen ? "rotate(180deg)" : "none",
+            transition: "transform 0.2s",
+          }}
+        >
+          <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
 
-      {/* CALCULATOR BODY */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            style={{ padding: "20px", borderTop: "1px solid #333" }}
+            transition={{ duration: 0.22 }}
+            style={{ overflow: "hidden" }}
           >
-            {/* INPUT */}
             <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                alignItems: "center",
-                marginBottom: "20px",
-              }}
+              style={{ padding: "16px", borderTop: "1px solid var(--border)" }}
             >
-              <span style={{ color: "#888", fontSize: "0.9rem" }}>Target:</span>
-              <input
-                type="number"
-                placeholder="e.g. 100"
-                value={targetWeight}
-                onChange={(e) => setTargetWeight(e.target.value)}
-                style={{
-                  background: "#000",
-                  border: "1px solid #444",
-                  color: "#fff",
-                  padding: "8px",
-                  borderRadius: "5px",
-                  width: "100px",
-                  fontWeight: "bold",
-                }}
-              />
-              <span style={{ color: "#888", fontSize: "0.9rem" }}>kg</span>
-            </div>
-
-            {/* 🏋️‍♂️ VISUAL BARBELL */}
-            <div
-              style={{
-                position: "relative",
-                height: "120px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                background: "#0a0a0a",
-                borderRadius: "8px",
-                padding: "0 20px",
-                overflowX: "auto",
-              }}
-            >
-              {/* BAR SLEEVE */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "0",
-                  right: "0",
-                  height: "15px",
-                  background: "#555",
-                  zIndex: 0,
-                  transform: "translateY(-50%)",
-                }}
-              ></div>
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "0",
-                  width: "30px",
-                  height: "25px",
-                  background: "#777",
-                  zIndex: 1,
-                  transform: "translateY(-50%)",
-                  borderRight: "2px solid #333",
-                }}
-              ></div>
-
-              {/* PLATES */}
+              {/* Input row */}
               <div
                 style={{
                   display: "flex",
-                  gap: "2px",
-                  marginLeft: "35px",
-                  zIndex: 2,
                   alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "20px",
                 }}
               >
-                <AnimatePresence>
-                  {calculatedPlates.length > 0 ? (
-                    calculatedPlates.map((p, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        style={{
-                          width: "15px",
-                          height: p.height,
-                          backgroundColor: p.color,
-                          border: p.border || "none",
-                          borderRadius: "2px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        title={`${p.weight}kg`}
-                      />
-                    ))
-                  ) : (
-                    <span
-                      style={{
-                        color: "#444",
-                        fontSize: "0.8rem",
-                        background: "#000",
-                        padding: "5px",
-                      }}
-                    >
-                      Empty Bar (20kg)
-                    </span>
-                  )}
-                </AnimatePresence>
+                <label className="label" style={{ whiteSpace: "nowrap" }}>
+                  Target
+                </label>
+                <div
+                  style={{ position: "relative", flex: 1, maxWidth: "160px" }}
+                >
+                  <input
+                    type="number"
+                    placeholder="100"
+                    value={targetWeight}
+                    onChange={(e) => setTargetWeight(e.target.value)}
+                    className="cyber-input"
+                    style={{ paddingRight: "36px" }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.65rem",
+                      color: "var(--text-3)",
+                    }}
+                  >
+                    kg
+                  </span>
+                </div>
+                {parseFloat(targetWeight) > 0 && (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.68rem",
+                      color: isExact ? "var(--green)" : "var(--gold)",
+                    }}
+                  >
+                    {isExact ? `= ${totalWeight}kg ✓` : `≈ ${totalWeight}kg`}
+                  </span>
+                )}
               </div>
-            </div>
 
-            {/* TEXT SUMMARY */}
-            {calculatedPlates.length > 0 && (
+              {/* Visual barbell */}
               <div
                 style={{
-                  marginTop: "15px",
+                  position: "relative",
+                  height: "100px",
+                  background: "var(--surface-0)",
+                  borderRadius: "var(--radius-md)",
+                  overflow: "hidden",
                   display: "flex",
-                  gap: "10px",
-                  flexWrap: "wrap",
+                  alignItems: "center",
+                  padding: "0 12px",
+                  marginBottom: "16px",
                 }}
               >
-                {Object.entries(
-                  calculatedPlates.reduce((acc, curr) => {
-                    acc[curr.weight] = (acc[curr.weight] || 0) + 1;
-                    return acc;
-                  }, {})
-                )
-                  .sort((a, b) => b[0] - a[0])
-                  .map(([weight, count]) => (
-                    <div
-                      key={weight}
-                      style={{
-                        fontSize: "0.8rem",
-                        background: "#222",
-                        padding: "5px 10px",
-                        borderRadius: "5px",
-                        color: "#ccc",
-                      }}
-                    >
-                      <span style={{ color: "#ef4444", fontWeight: "bold" }}>
-                        {weight}kg
-                      </span>{" "}
-                      x {count}
-                    </div>
-                  ))}
-                <span
+                {/* Bar */}
+                <div
                   style={{
-                    color: "#666",
-                    fontSize: "0.8rem",
-                    alignSelf: "center",
+                    position: "absolute",
+                    top: "50%",
+                    left: 0,
+                    right: 0,
+                    height: "10px",
+                    background: "linear-gradient(180deg, #888, #555, #888)",
+                    transform: "translateY(-50%)",
+                    zIndex: 0,
+                  }}
+                />
+                {/* Collar */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: "50%",
+                    width: "24px",
+                    height: "20px",
+                    background: "linear-gradient(90deg, #aaa, #777)",
+                    transform: "translateY(-50%)",
+                    zIndex: 1,
+                    borderRadius: "0 3px 3px 0",
+                  }}
+                />
+
+                {/* Plates */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "2px",
+                    marginLeft: "28px",
+                    zIndex: 2,
+                    alignItems: "center",
                   }}
                 >
-                  (Per Side)
-                </span>
+                  <AnimatePresence>
+                    {plates.length > 0 ? (
+                      plates.map((p, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ x: -12, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: i * 0.03 }}
+                          style={{
+                            width: "14px",
+                            height: p.h,
+                            background: p.color,
+                            border: p.border || "none",
+                            borderRadius: "2px",
+                            flexShrink: 0,
+                            boxShadow: "1px 0 3px rgba(0,0,0,0.4)",
+                            cursor: "default",
+                          }}
+                          title={`${p.label}kg`}
+                        />
+                      ))
+                    ) : (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "0.65rem",
+                          color: "var(--text-3)",
+                        }}
+                      >
+                        Empty bar — 20kg
+                      </span>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-            )}
+
+              {/* Plate summary chips */}
+              {plates.length > 0 && (
+                <div>
+                  <div
+                    className="section-title"
+                    style={{ marginBottom: "8px" }}
+                  >
+                    Per Side
+                  </div>
+                  <div
+                    style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}
+                  >
+                    {Object.entries(
+                      plates.reduce((acc, p) => {
+                        acc[p.weight] = {
+                          count: (acc[p.weight]?.count || 0) + 1,
+                          color: p.color,
+                        };
+                        return acc;
+                      }, {}),
+                    )
+                      .sort((a, b) => b[0] - a[0])
+                      .map(([weight, { count, color }]) => (
+                        <div
+                          key={weight}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "5px 10px",
+                            background: "var(--surface-2)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--radius-sm)",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "2px",
+                              background: color,
+                              display: "block",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontWeight: 700,
+                              fontSize: "0.9rem",
+                              color: "var(--text-1)",
+                            }}
+                          >
+                            {weight}kg
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: "var(--font-mono)",
+                              fontSize: "0.65rem",
+                              color: "var(--text-3)",
+                            }}
+                          >
+                            ×{count}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
