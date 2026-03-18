@@ -13,6 +13,7 @@ export default function Home() {
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState("U");
   const [activeTab, setActiveTab] = useState("home");
+  const [pendingWorkoutName, setPendingWorkoutName] = useState("");
 
   useEffect(() => {
     const savedId = localStorage.getItem("pte_userId");
@@ -193,7 +194,10 @@ export default function Home() {
                 apiBase={API_BASE}
                 userId={userId}
                 userName={userName}
-                onStartWorkout={(name) => setActiveTab("workout")}
+                onStartWorkout={(name) => {
+                  setPendingWorkoutName(name || "");
+                  setActiveTab("workout");
+                }}
                 onNavigate={(tab) => setActiveTab(tab)}
               />
             </motion.div>
@@ -207,7 +211,12 @@ export default function Home() {
               exit={{ opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              <WorkoutLog apiBase={API_BASE} userId={userId} />
+              <WorkoutLog
+                apiBase={API_BASE}
+                userId={userId}
+                pendingSessionName={pendingWorkoutName}
+                onClearPending={() => setPendingWorkoutName("")}
+              />
             </motion.div>
           )}
 

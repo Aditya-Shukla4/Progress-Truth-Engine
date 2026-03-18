@@ -5,6 +5,7 @@ import RestTimer from "./RestTimer";
 import OneRepMax from "./OneRepMax";
 import MuscleSplitChart from "./MuscleSplitChart";
 import ShareableWorkoutCard from "./ShareableWorkoutCard";
+import ActiveWorkout from "./ActiveWorkout";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import ExerciseChart from "./ExerciseChart";
@@ -13,8 +14,24 @@ import PlateCalculator from "./PlateCalculator";
 import confetti from "canvas-confetti";
 import { EXERCISE_DB } from "../utils/exerciseDB";
 
-export default function WorkoutLog({ apiBase, userId }) {
+export default function WorkoutLog({
+  apiBase,
+  userId,
+  pendingSessionName,
+  onClearPending,
+}) {
+  const [activeMode, setActiveMode] = useState(false);
+  const [activeSessionName, setActiveSessionName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Auto-launch if coming from Dashboard "Start Today's Session"
+  useEffect(() => {
+    if (pendingSessionName) {
+      setActiveSessionName(pendingSessionName);
+      setActiveMode(true);
+      onClearPending?.();
+    }
+  }, [pendingSessionName]);
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
@@ -297,6 +314,95 @@ export default function WorkoutLog({ apiBase, userId }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* ── ACTIVE WORKOUT MODE ── */}
+      <AnimatePresence>
+        {activeMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 150,
+              overflowY: "auto",
+            }}
+          >
+            <ActiveWorkout
+              apiBase={apiBase}
+              userId={userId}
+              initialName={activeSessionName}
+              onFinish={() => {
+                setActiveMode(false);
+                fetchData();
+              }}
+              onDiscard={() => setActiveMode(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── START SESSION CTA ── */}
+      <div
+        className="card"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,69,0,0.08) 0%, var(--surface-1) 50%)",
+          border: "1px solid var(--ember-border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "14px",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 900,
+              fontSize: "1.1rem",
+              letterSpacing: "0.5px",
+              color: "var(--text-1)",
+            }}
+          >
+            Ready to train?
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.62rem",
+              color: "var(--text-3)",
+              marginTop: "2px",
+            }}
+          >
+            Launch immersive workout mode
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setActiveSessionName("");
+            setActiveMode(true);
+          }}
+          style={{
+            padding: "11px 18px",
+            background: "var(--ember)",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            color: "white",
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: "0.9rem",
+            letterSpacing: "0.05em",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            boxShadow: "0 0 20px var(--ember-glow)",
+            flexShrink: 0,
+          }}
+        >
+          Start ⚡
+        </button>
+      </div>
+
       {/* Hidden share card */}
       <div style={{ position: "absolute", left: "-9999px" }}>
         <ShareableWorkoutCard ref={shareCardRef} {...shareData} />
