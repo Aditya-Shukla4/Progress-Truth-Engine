@@ -6,6 +6,7 @@ import WorkoutLog from "../components/WorkoutLog";
 import Profile from "../components/Profile";
 import Dashboard from "../components/Dashboard";
 import { motion, AnimatePresence } from "framer-motion";
+import { StreakCelebration, PageTransition } from "../components/animations";
 
 export default function Home() {
   const API_BASE = "https://progresstruth-api.onrender.com";
@@ -14,6 +15,7 @@ export default function Home() {
   const [userName, setUserName] = useState("U");
   const [activeTab, setActiveTab] = useState("home");
   const [pendingWorkoutName, setPendingWorkoutName] = useState("");
+  const [streakToast, setStreakToast] = useState(null);
 
   useEffect(() => {
     const savedId = localStorage.getItem("pte_userId");
@@ -140,6 +142,16 @@ export default function Home() {
   return (
     <div className="app-shell">
       <div className="ambient-glow" />
+
+      {/* ── STREAK CELEBRATION ── */}
+      <AnimatePresence>
+        {streakToast && (
+          <StreakCelebration
+            streak={streakToast}
+            onDone={() => setStreakToast(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── HEADER ── */}
       <header className="app-header">
