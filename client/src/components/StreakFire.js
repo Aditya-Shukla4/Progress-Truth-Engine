@@ -3,78 +3,103 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 export default function StreakFire({ history }) {
-  // 🔥 STREAK CALCULATION ENGINE
   const streak = useMemo(() => {
     if (!history || history.length === 0) return 0;
 
-    // 1. Saare dates nikalo aur Time hata do (Sirf YYYY-MM-DD chahiye)
     const uniqueDates = Array.from(
-      new Set(history.map((w) => new Date(w.date).toDateString()))
+      new Set(history.map((w) => new Date(w.date).toDateString())),
     );
 
-    // 2. Sort karo (Newest First)
-    // Date objects mein convert karke sort karo
     const sortedDates = uniqueDates
       .map((d) => new Date(d))
       .sort((a, b) => b - a);
 
     if (sortedDates.length === 0) return 0;
 
-    // 3. Check karo Streak Zinda hai kya?
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-
-    const lastWorkout = sortedDates[0];
+    const lastWorkout = new Date(sortedDates[0]);
     lastWorkout.setHours(0, 0, 0, 0);
 
-    // Agar last workout na aaj hai, na kal hai -> Streak Toot gayi 💔
-    // (Matlab gap > 1 day)
-    const diffTime = Math.abs(today - lastWorkout);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // Note: DiffDays 0 (Today), 1 (Yesterday). If > 1, streak is 0.
+    const diffDays = Math.ceil(
+      Math.abs(today - lastWorkout) / (1000 * 60 * 60 * 24),
+    );
     if (diffDays > 1) return 0;
 
-    // 4. Consecutive Days Count karo
     let currentStreak = 1;
-
     for (let i = 0; i < sortedDates.length - 1; i++) {
       const curr = sortedDates[i];
-      const prev = sortedDates[i + 1]; // Pichla din (kyunki descending sort hai)
-
-      const dayDiff = (curr - prev) / (1000 * 60 * 60 * 24);
-
-      if (Math.round(dayDiff) === 1) {
+      const prev = sortedDates[i + 1];
+      if (Math.round((curr - prev) / (1000 * 60 * 60 * 24)) === 1) {
         currentStreak++;
-      } else {
-        break; // Lagaatar nahi hai, chain toot gayi
-      }
+      } else break;
     }
 
     return currentStreak;
   }, [history]);
 
-  // Agar streak 0 hai toh kuch mat dikhao (ya grey dikhao)
+  const getFlameIntensity = (s) => {
+    if (s === 0)
+      return {
+        tier: 0,
+        label: "No Streak",
+        color: "var(--text-4)",
+        border: "var(--border)",
+        bg: "transparent",
+      };
+    if (s < 3)
+      return {
+        tier: 1,
+        label: "Day Streak",
+        color: "#60a5fa",
+        border: "rgba(96,165,250,0.3)",
+        bg: "rgba(96,165,250,0.08)",
+      };
+    if (s < 7)
+      return {
+        tier: 2,
+        label: "Day Streak",
+        color: "var(--ember)",
+        border: "var(--ember-border)",
+        bg: "var(--ember-dim)",
+      };
+    if (s < 14)
+      return {
+        tier: 3,
+        label: "Day Streak",
+        color: "#facc15",
+        border: "rgba(250,204,21,0.35)",
+        bg: "rgba(250,204,21,0.08)",
+      };
+    return {
+      tier: 4,
+      label: "Day Streak",
+      color: "#c084fc",
+      border: "rgba(192,132,252,0.35)",
+      bg: "rgba(192,132,252,0.08)",
+    };
+  };
+
+  const { tier, label, color, border, bg } = getFlameIntensity(streak);
+
   if (streak === 0)
     return (
       <div
         style={{
-          color: "#444",
-          fontSize: "0.8rem",
-          fontWeight: "bold",
           display: "flex",
           alignItems: "center",
           gap: "5px",
-          border: "1px solid #333",
-          padding: "5px 10px",
-          borderRadius: "20px",
+          border: "1px solid var(--border)",
+          padding: "4px 10px",
+          borderRadius: "99px",
+          color: "var(--text-4)",
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.65rem",
+          letterSpacing: "0.08em",
         }}
       >
-        <span>💀</span> NO STREAK
+        <span style={{ fontSize: "0.75rem" }}>💀</span> No Streak
       </div>
     );
 
@@ -82,38 +107,69 @@ export default function StreakFire({ history }) {
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      whileHover={{ scale: 1.1 }}
+      whileHover={{ scale: 1.05 }}
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "6px",
-        backgroundColor: "rgba(239, 68, 68, 0.1)", // Light Red BG
-        border: "1px solid #ef4444",
+        gap: "7px",
+        background: bg,
+        border: `1px solid ${border}`,
         padding: "5px 12px",
-        borderRadius: "20px",
+        borderRadius: "99px",
         cursor: "default",
+        boxShadow: tier >= 2 ? `0 0 14px ${color}20` : "none",
       }}
     >
       <motion.span
-        animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-        style={{ fontSize: "1.2rem" }}
+        animate={
+          tier >= 2
+            ? { scale: [1, 1.25, 1], opacity: [0.8, 1, 0.8] }
+            : { scale: 1 }
+        }
+        transition={{ duration: 1.4, repeat: Infinity }}
+        style={{ fontSize: "1rem", lineHeight: 1 }}
       >
-        🔥
+        {tier === 0
+          ? "💀"
+          : tier === 1
+            ? "🔥"
+            : tier === 2
+              ? "🔥"
+              : tier === 3
+                ? "⚡"
+                : "👑"}
       </motion.span>
 
-      <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-        <span style={{ fontSize: "1rem", fontWeight: "900", color: "#ef4444" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          lineHeight: 1,
+          gap: "1px",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 900,
+            fontSize: "1rem",
+            color,
+            lineHeight: 1,
+          }}
+        >
           {streak}
         </span>
         <span
           style={{
-            fontSize: "0.6rem",
-            color: "#ef4444",
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.55rem",
+            color,
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
+            opacity: 0.8,
           }}
         >
-          DAY STREAK
+          {label}
         </span>
       </div>
     </motion.div>
