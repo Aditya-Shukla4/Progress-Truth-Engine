@@ -4,26 +4,24 @@ import Onboarding from "../components/Onboarding";
 import CheckIn from "../components/CheckIn";
 import WorkoutLog from "../components/WorkoutLog";
 import Profile from "../components/Profile";
+import Dashboard from "../components/Dashboard";
 import { motion, AnimatePresence } from "framer-motion";
-// import Leaderboard from "../components/Leaderboard"; // 👈 PHASE 1: HIDDEN
 
 export default function Home() {
   const API_BASE = "https://progresstruth-api.onrender.com";
   // const API_BASE = "http://localhost:5000";
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState("U");
-  const [activeTab, setActiveTab] = useState("workout");
-  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
 
   useEffect(() => {
-    setMounted(true);
     const savedId = localStorage.getItem("pte_userId");
     if (savedId) {
       setUserId(savedId);
       fetch(`${API_BASE}/api/user/${savedId}`)
-        .then((res) => res.json())
-        .then((data) => setUserName(data.name || "U"))
-        .catch((err) => console.log("User fetch fail"));
+        .then((r) => r.json())
+        .then((d) => setUserName(d.name || "U"))
+        .catch(() => {});
     }
   }, []);
 
@@ -36,17 +34,39 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem("pte_userId");
     setUserId(null);
-    setActiveTab("workout");
+    setActiveTab("home");
   };
 
-  if (!userId) {
-    return <Onboarding apiBase={API_BASE} onLogin={handleLogin} />;
-  }
+  if (!userId) return <Onboarding apiBase={API_BASE} onLogin={handleLogin} />;
 
   const tabs = [
     {
+      id: "home",
+      label: "Home",
+      icon: (active) => (
+        <svg
+          viewBox="0 0 22 22"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          width="20"
+          height="20"
+        >
+          <path
+            d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill={active ? "currentColor" : "none"}
+            fillOpacity={active ? 0.15 : 0}
+          />
+          <path d="M8 20v-8h6v8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
       id: "workout",
-      icon: (
+      label: "Train",
+      icon: (active) => (
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -63,11 +83,11 @@ export default function Home() {
           <path d="M2 12h2M20 12h2" strokeLinecap="round" />
         </svg>
       ),
-      label: "Train",
     },
     {
       id: "checkin",
-      icon: (
+      label: "Check-in",
+      icon: (active) => (
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -76,6 +96,13 @@ export default function Home() {
           width="20"
           height="20"
         >
+          <circle
+            cx="12"
+            cy="12"
+            r="4"
+            fill={active ? "currentColor" : "none"}
+            fillOpacity={active ? 0.2 : 0}
+          />
           <path
             d="M12 3v1m0 16v1M4.22 4.22l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M4.927 19.073l.707-.707M18.364 5.636l.707-.707"
             strokeLinecap="round"
@@ -83,11 +110,11 @@ export default function Home() {
           <circle cx="12" cy="12" r="4" />
         </svg>
       ),
-      label: "Check-in",
     },
     {
       id: "profile",
-      icon: (
+      label: "Profile",
+      icon: (active) => (
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -96,33 +123,30 @@ export default function Home() {
           width="20"
           height="20"
         >
-          <circle cx="12" cy="8" r="4" />
+          <circle
+            cx="12"
+            cy="8"
+            r="4"
+            fill={active ? "currentColor" : "none"}
+            fillOpacity={active ? 0.15 : 0}
+          />
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
         </svg>
       ),
-      label: "Profile",
     },
   ];
 
   return (
     <div className="app-shell">
-      {/* Ambient background glow */}
       <div className="ambient-glow" />
 
       {/* ── HEADER ── */}
       <header className="app-header">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="header-inner"
-        >
+        <div className="header-inner">
           <div className="wordmark">
             <span className="wordmark-accent">PROGRESS</span>
             <span className="wordmark-main">TRUTH</span>
           </div>
-
-          {/* Avatar */}
           <button
             onClick={() => setActiveTab("profile")}
             className={`avatar-btn ${activeTab === "profile" ? "avatar-btn--active" : ""}`}
@@ -131,9 +155,9 @@ export default function Home() {
             <span>{userName[0].toUpperCase()}</span>
             {activeTab === "profile" && <span className="avatar-ring" />}
           </button>
-        </motion.div>
+        </div>
 
-        {/* Tab indicator strip */}
+        {/* Tab strip */}
         <div className="tab-strip">
           {tabs.map((tab) => (
             <button
@@ -157,12 +181,30 @@ export default function Home() {
       {/* ── MAIN CONTENT ── */}
       <main className="app-main">
         <AnimatePresence mode="wait">
+          {activeTab === "home" && (
+            <motion.div
+              key="home"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <Dashboard
+                apiBase={API_BASE}
+                userId={userId}
+                userName={userName}
+                onStartWorkout={(name) => setActiveTab("workout")}
+                onNavigate={(tab) => setActiveTab(tab)}
+              />
+            </motion.div>
+          )}
+
           {activeTab === "workout" && (
             <motion.div
               key="workout"
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
               <WorkoutLog apiBase={API_BASE} userId={userId} />
@@ -172,9 +214,9 @@ export default function Home() {
           {activeTab === "checkin" && (
             <motion.div
               key="checkin"
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
               <CheckIn apiBase={API_BASE} userId={userId} />
@@ -184,9 +226,9 @@ export default function Home() {
           {activeTab === "profile" && (
             <motion.div
               key="profile"
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
               <Profile
@@ -210,7 +252,7 @@ export default function Home() {
               className={`nav-btn ${isActive ? "nav-btn--active" : ""}`}
               aria-label={tab.label}
             >
-              <span className="nav-icon">{tab.icon}</span>
+              <span className="nav-icon">{tab.icon(isActive)}</span>
               <span className="nav-label">{tab.label}</span>
               {isActive && (
                 <motion.span
