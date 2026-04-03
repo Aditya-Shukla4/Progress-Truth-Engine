@@ -10,7 +10,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com)
 [![License](https://img.shields.io/badge/License-MIT-red?style=flat-square)](LICENSE)
 
-[Live Demo](https://progresstruth.vercel.app) · [Report Bug](https://github.com/yourusername/progresstruthengine/issues) · [Request Feature](https://github.com/yourusername/progresstruthengine/issues)
+[Live Demo]( https://progress-truth-engine.vercel.app )· [Report Bug](https://github.com/Aditya-Shukla4/Progress-Truth-Engine/issues) · [Request Feature](https://github.com/Aditya-Shukla4/Progress-Truth-Engine/issues)
 
 </div>
 
@@ -344,6 +344,6 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Built with 🔥 by someone who actually lifts
 
-**[⭐ Star this repo if it helped you stay consistent](https://github.com/yourusername/progresstruthengine)**
+**[⭐ Star this repo if it helped you stay consistent](https://github.com/Aditya-Shukla4/Progress-Truth-Engine)**
 
 </div>
